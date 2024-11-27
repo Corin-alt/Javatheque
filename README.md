@@ -8,7 +8,7 @@ This project is part of module RT0805 of the Master DAS.
 - Dupont Corentin
 - Morlet Flavien
 
-## Usage
+## Usage - test
 
 Before you start, you'll need to install **Glassfish**.
 
