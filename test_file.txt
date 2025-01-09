@@ -1,2 +1,0 @@
-Modification pour tester Jenkins avec l'utilisateur corentin
-Modification pour tester Jenkins avec la branche main
