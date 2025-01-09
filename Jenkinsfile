@@ -22,14 +22,48 @@ pipeline {
         APP_DEPLOY_PATH = '/apps/java/deploy'
         
         DOCKERFILE_CHANGED = 'false'
+        
+        GLASSFISH_HOME = '/opt/glassfish7'
+        CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
+        DB_URL = credentials('db_url')
+        DB_USER = credentials('db_user')
+        DB_PASSWORD = credentials('db_password')
     }
     
     tools {
         maven 'Maven'
         docker 'Docker'
+        jdk 'JDK17'
     }
     
     stages {
+        stage('Setup Environment') {
+            steps {
+                script {
+                    sh '''
+                        apt-get update
+                        apt-get install -y wget gnupg
+                        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+                        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
+                        apt-get update
+                        apt-get install -y google-chrome-stable
+                        
+                        CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1)
+                        wget -N "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}"
+                        wget -N "https://chromedriver.storage.googleapis.com/$(cat LATEST_RELEASE_${CHROME_VERSION})/chromedriver_linux64.zip"
+                        unzip chromedriver_linux64.zip
+                        mv chromedriver /usr/local/bin/
+                        chmod +x /usr/local/bin/chromedriver
+                        
+                        # Installation de GlassFish 7
+                        wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
+                        unzip glassfish-7.0.0.zip -d /opt/
+                        chmod -R +x ${GLASSFISH_HOME}/bin
+                    '''
+                }
+            }
+        }
+
         stage('Checkout & Build') {
             steps {
                 script {
@@ -37,6 +71,26 @@ pipeline {
                     def changes = changeset 'Dockerfile'
                     env.DOCKERFILE_CHANGED = changes.toString()
                 }
+        
+                sh '''
+                    ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
+                    # Configuration de la ressource MongoDB dans GlassFish
+                    ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
+                        --restype=java.lang.String \
+                        --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
+                        --property value=${DB_URL} \
+                        mongodb/url
+                    ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
+                        --restype=java.lang.String \
+                        --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
+                        --property value=${DB_USER} \
+                        mongodb/user
+                    ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
+                        --restype=java.lang.String \
+                        --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
+                        --property value=${DB_PASSWORD} \
+                        mongodb/password
+                '''
                 sh 'mvn clean package -DskipTests'
             }
         }
@@ -53,6 +107,29 @@ pipeline {
             post {
                 always {
                     junit '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+        
+        stage('Integration Testing') {
+            when {
+                expression {
+                    return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
+                }
+            }
+            steps {
+                sh """
+                    mvn verify -Dwebdriver.chrome.driver=/usr/local/bin/chromedriver \
+                        -Dselenium.chrome.options="${CHROME_OPTIONS}" \
+                        -Djakarta.persistence.jdbc.url=${DB_URL} \
+                        -Djakarta.persistence.jdbc.user=${DB_USER} \
+                        -Djakarta.persistence.jdbc.password=${DB_PASSWORD} \
+                        -Pfailsafe
+                """
+            }
+            post {
+                always {
+                    junit '**/target/failsafe-reports/*.xml'
                 }
             }
         }
@@ -133,6 +210,7 @@ pipeline {
     
     post {
         always {
+            sh '${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true'
             cleanWs()
         }
         success {
