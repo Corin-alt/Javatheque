@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class JavathequeTest {
+public class JavathequeSeleniumTest {
     private WebDriver driver;
     private static final String BASE_URL = System.getProperty("baseUrl", "http://localhost:8080/javatheque");
     private static final String email = "test" + "-" + UUID.randomUUID() + "@test.com";
