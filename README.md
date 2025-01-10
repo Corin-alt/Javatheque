@@ -61,6 +61,9 @@ mvn test clean -Dtest=**/*UnitTest
 
 ### Selenium
 For these tests, the application must be deployed and run !
+
+A chrome browser must be installed on your own machine ! 
+
 ```powershell
 mvn test  clean -Dtest=**/*SeleniumTest -Dbrowser=chrome -DbaseUrl=http://localhost:8080/javatheque -Dheadless=false
 ```
