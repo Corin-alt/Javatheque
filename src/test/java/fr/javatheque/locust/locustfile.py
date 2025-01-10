@@ -198,7 +198,6 @@ class NetflixTestUser(HttpUser):
                 response.failure(f"Failed to update film: {response.status_code}")
 
     def on_stop(self):
-        """Déconnexion"""
         if self.logged_in:
             with self.client.get(
                 "/logout",
@@ -213,7 +212,6 @@ class NetflixTestUser(HttpUser):
 
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
-    """Initialisation avant le début des tests"""
     logger.info("Starting load test...")
     global mongodb_client
     try:
@@ -225,7 +223,6 @@ def on_test_start(environment, **kwargs):
 
 @events.test_stop.add_listener
 def on_test_stop(environment, **kwargs):
-    """Nettoyage après la fin des tests"""
     logger.info("Test completed.")
     try:
         cleanup_test_database()

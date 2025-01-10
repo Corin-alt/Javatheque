@@ -2,6 +2,7 @@ package fr.javatheque.selenium.test;
 
 import fr.javatheque.selenium.config.WebDriverConfig;
 import fr.javatheque.selenium.pages.*;
+import fr.javatheque.util.DatabaseUtils;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.WebDriver;
 
@@ -28,6 +29,8 @@ public class JavathequeSeleniumTest {
 
     @BeforeAll
     void setup() {
+        DatabaseUtils.setTestEnvironment(true);
+
         boolean headless = Boolean.parseBoolean(System.getProperty("headless", "true"));
         driver = WebDriverConfig.createChromeDriver(headless);
 
@@ -43,6 +46,9 @@ public class JavathequeSeleniumTest {
         if (driver != null) {
             driver.quit();
         }
+        DatabaseUtils.clearDatabase();
+        DatabaseUtils.clearEnvironment();
+        DatabaseUtils.setTestEnvironment(false);
     }
 
     private void waitBriefly() {

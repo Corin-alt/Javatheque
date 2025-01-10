@@ -63,7 +63,6 @@ public class RegisterServlet extends HttpServlet {
             String email = request.getParameter("email");
             String password = request.getParameter("password");
 
-            // Validation des données
             if (!validateInput(lastname, firstname, email, password)) {
                 handleError(request, response, "Missing or invalid input data", isTestRequest);
                 return;
@@ -77,10 +76,8 @@ public class RegisterServlet extends HttpServlet {
                 return;
             }
 
-            // Création de l'utilisateur
             User user = ur.createUser(new User(lastname, firstname, email, password, isTestRequest));
 
-            // Configuration de la session et des beans
             handleSuccessfulRegistration(request, response, user, isTestRequest);
 
         } catch (Exception e) {

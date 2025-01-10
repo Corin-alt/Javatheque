@@ -81,22 +81,18 @@ public class LoginServlet extends HttpServlet {
 
     private boolean checkPassword(String inputPassword, String storedPassword, boolean isTestRequest) {
         if (isTestRequest) {
-            // Pour les tests, on accepte une comparaison simple
             return inputPassword.equals(storedPassword);
         }
-        // Pour les requêtes normales, on utilise la vérification sécurisée
         return PasswordUtil.verifyPassword(inputPassword, storedPassword);
     }
 
     private void handleSuccessfulLogin(HttpServletRequest request, HttpServletResponse response,
                                        User user, boolean isTestRequest) throws IOException, ServletException {
         if (isTestRequest) {
-            // Pour les tests Locust, renvoyer juste un statut 200
             response.setStatus(HttpServletResponse.SC_OK);
             return;
         }
 
-        // Pour les requêtes web normales
         if (userBean != null) {
             userBean.setUserId(user.getId());
             userBean.setLastname(user.getLastname());
@@ -111,12 +107,10 @@ public class LoginServlet extends HttpServlet {
     private void handleFailedLogin(HttpServletRequest request, HttpServletResponse response,
                                    boolean isTestRequest) throws IOException, ServletException {
         if (isTestRequest) {
-            // Pour les tests Locust, renvoyer un statut 401
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid credentials");
             return;
         }
 
-        // Pour les requêtes web normales
         if (errorMessageBean != null) {
             errorMessageBean.setErrorMessage("No user found or incorrect password.");
         }

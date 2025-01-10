@@ -48,12 +48,10 @@ public class LogoutServlet extends HttpServlet {
                     logger.info("User logged out: " + userId);
                 }
             } else if (isTestRequest) {
-                // For tests, return success even if no session exists
                 response.setStatus(HttpServletResponse.SC_OK);
                 return;
             }
 
-            // Standard redirect for regular web requests
             handleRegularLogout(request, response);
 
         } catch (Exception e) {

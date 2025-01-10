@@ -97,14 +97,12 @@ public class LibraryServlet extends HttpServlet {
                                          List<Film> films, boolean isTestRequest) throws ServletException, IOException {
 
         if (isTestRequest) {
-            // Pour les tests Locust, renvoyer le JSON
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write(gson.toJson(films));
             return;
         }
 
-        // Pour les requêtes web normales
         request.setAttribute("films", films);
         request.getRequestDispatcher("/views/library.jsp").forward(request, response);
     }
@@ -129,7 +127,6 @@ public class LibraryServlet extends HttpServlet {
             return;
         }
 
-        // Pour les requêtes web normales
         request.setAttribute("error", "An error occurred while accessing your library");
         request.getRequestDispatcher("/views/error.jsp").forward(request, response);
     }
