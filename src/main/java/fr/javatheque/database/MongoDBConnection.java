@@ -12,26 +12,17 @@ import org.bson.codecs.configuration.CodecRegistry;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
-/**
- * This class provides methods to establish a connection to MongoDB
- * and retrieve database instances.
- */
 public class MongoDBConnection {
 
     private static MongoClient mongoClient = null;
+    private static final String TEST_DATABASE_NAME = "javatheque-locust";
+    private static final String PROD_DATABASE_NAME = "javatheque";
 
-    // CodecRegistry for custom codecs
     private static final CodecRegistry codecRegistry = CodecRegistries.fromRegistries(
             MongoClientSettings.getDefaultCodecRegistry(),
             CodecRegistries.fromCodecs(new LibraryCodec())
     );
 
-    /**
-     * Builds the connection string from GlassFish resources.
-     *
-     * @return The MongoDB connection string.
-     * @throws NamingException if the resources cannot be found
-     */
     private static String buildConnectionString() throws NamingException {
         InitialContext context = new InitialContext();
         String url = (String) context.lookup("mongodb/url");
@@ -49,11 +40,6 @@ public class MongoDBConnection {
         return String.format("mongodb://%s:%s@%s", user, password, baseUrl);
     }
 
-    /**
-     * Retrieves the MongoClient instance, creating it if it doesn't exist.
-     *
-     * @return The MongoClient instance.
-     */
     private static MongoClient getMongoClient() {
         if (mongoClient == null) {
             try {
@@ -75,29 +61,19 @@ public class MongoDBConnection {
         return mongoClient;
     }
 
-    /**
-     * Retrieves the MongoDatabase instance for the specified database name.
-     *
-     * @param dbName The name of the MongoDB database.
-     * @return The MongoDatabase instance.
-     */
     public static MongoDatabase getDatabase(String dbName) {
         return getMongoClient().getDatabase(dbName);
     }
 
-    /**
-     * Retrieves the MongoDatabase instance for the 'javatheque' database.
-     *
-     * @return The MongoDatabase instance for the 'javatheque' database.
-     */
     public static MongoDatabase getJavathequeDatabase() {
-        return getDatabase("javatheque");
+        return getDatabase(PROD_DATABASE_NAME);
     }
 
-    /**
-     * Closes the MongoDB connection.
-     * Should be called when the application shuts down.
-     */
+    // Nouvelle méthode pour la base de données de test
+    public static MongoDatabase getJavathequetLocustDatabase() {
+        return getDatabase(TEST_DATABASE_NAME);
+    }
+
     public static void close() {
         if (mongoClient != null) {
             mongoClient.close();

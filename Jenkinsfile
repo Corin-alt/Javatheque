@@ -102,7 +102,7 @@ pipeline {
                 }
             }
             steps {
-                sh 'mvn test'
+                sh 'mvn clean test -Dbrowser=chrome -DbaseUrl=http://localhost:8080/javatheque -Dheadless=true'
             }
             post {
                 always {

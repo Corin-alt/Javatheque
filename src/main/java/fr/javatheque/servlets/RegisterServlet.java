@@ -14,12 +14,14 @@ import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 /**
  * Servlet that handles user registration requests.
  */
 @WebServlet(name = "RegisterServlet", urlPatterns = {"/register"})
 public class RegisterServlet extends HttpServlet {
+    private static final Logger logger = Logger.getLogger(RegisterServlet.class.getName());
 
     @Inject
     private ErrorMessageBean errorMessageBean;
@@ -30,10 +32,10 @@ public class RegisterServlet extends HttpServlet {
     /**
      * Handles the HTTP GET request for the registration page.
      *
-     * @param request  the HttpServletRequest object that contains the request the client made of the servlet
-     * @param response the HttpServletResponse object that contains the response the servlet sends to the client
+     * @param request  the HttpServletRequest object
+     * @param response the HttpServletResponse object
      * @throws ServletException if the request for the GET could not be handled
-     * @throws IOException      if an input or output error is detected when the servlet handles the GET request
+     * @throws IOException      if an input or output error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -44,34 +46,94 @@ public class RegisterServlet extends HttpServlet {
     /**
      * Handles the HTTP POST request for user registration.
      *
-     * @param request  the HttpServletRequest object that contains the request the client made of the servlet
-     * @param response the HttpServletResponse object that contains the response the servlet sends to the client
+     * @param request  the HttpServletRequest object
+     * @param response the HttpServletResponse object
      * @throws ServletException if the request for the POST could not be handled
-     * @throws IOException      if an input or output error is detected when the servlet handles the POST request
+     * @throws IOException      if an input or output error occurs
      */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String lastname = request.getParameter("lastname");
-        String firstname = request.getParameter("firstname");
-        String email = request.getParameter("email");
-        String password = request.getParameter("password");
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-        UserRepository ur = new UserRepository();
+        boolean isTestRequest = isTestRequest(request);
 
-        Optional<User> target = ur.getUserByEmail(email);
+        try {
+            String lastname = request.getParameter("lastname");
+            String firstname = request.getParameter("firstname");
+            String email = request.getParameter("email");
+            String password = request.getParameter("password");
 
-        if (target.isEmpty()) {
-            User user = ur.createUser(new User(lastname, firstname, email, password, true));
-            this.userBean.setUserId(user.getId());
-            this.userBean.setLastname(user.getLastname());
-            this.userBean.setFirstname(user.getFirstname());
+            // Validation des données
+            if (!validateInput(lastname, firstname, email, password)) {
+                handleError(request, response, "Missing or invalid input data", isTestRequest);
+                return;
+            }
 
-            HttpSession session = request.getSession(true);
-            session.setAttribute("userID", user.getId());
-        } else {
-            this.errorMessageBean.setErrorMessage("This email is already used.");
+            UserRepository ur = new UserRepository();
+            Optional<User> target = ur.getUserByEmail(email);
+
+            if (target.isPresent()) {
+                handleError(request, response, "This email is already used.", isTestRequest);
+                return;
+            }
+
+            // Création de l'utilisateur
+            User user = ur.createUser(new User(lastname, firstname, email, password, isTestRequest));
+
+            // Configuration de la session et des beans
+            handleSuccessfulRegistration(request, response, user, isTestRequest);
+
+        } catch (Exception e) {
+            logger.severe("Error during registration: " + e.getMessage());
+            handleError(request, response, "Registration failed: " + e.getMessage(), isTestRequest);
+        }
+    }
+
+    private boolean isTestRequest(HttpServletRequest request) {
+        String testHeader = request.getHeader("X-Test-Database");
+        return testHeader != null && Boolean.parseBoolean(testHeader);
+    }
+
+    private boolean validateInput(String lastname, String firstname, String email, String password) {
+        return lastname != null && !lastname.trim().isEmpty() &&
+                firstname != null && !firstname.trim().isEmpty() &&
+                email != null && !email.trim().isEmpty() &&
+                password != null && !password.trim().isEmpty();
+    }
+
+    private void handleSuccessfulRegistration(HttpServletRequest request, HttpServletResponse response,
+                                              User user, boolean isTestRequest)
+            throws ServletException, IOException {
+
+        if (isTestRequest) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
         }
 
+        if (userBean != null) {
+            userBean.setUserId(user.getId());
+            userBean.setLastname(user.getLastname());
+            userBean.setFirstname(user.getFirstname());
+        }
+
+        HttpSession session = request.getSession(true);
+        session.setAttribute("userID", user.getId());
+
         request.getRequestDispatcher("/views/welcome.jsp").forward(request, response);
+    }
+
+    private void handleError(HttpServletRequest request, HttpServletResponse response,
+                             String message, boolean isTestRequest)
+            throws ServletException, IOException {
+
+        if (isTestRequest) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, message);
+            return;
+        }
+
+        if (errorMessageBean != null) {
+            errorMessageBean.setErrorMessage(message);
+        }
+        request.getRequestDispatcher("/views/register.jsp").forward(request, response);
     }
 }

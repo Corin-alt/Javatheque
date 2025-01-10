@@ -1,13 +1,25 @@
 <web-app version="6.0"
-	xmlns="https://jakarta.ee/xml/ns/jakartaee"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
+		 xmlns="https://jakarta.ee/xml/ns/jakartaee"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
+
+	<!-- Ajout du filtre pour l'environnement de test -->
+	<filter>
+		<filter-name>testEnvironmentFilter</filter-name>
+		<filter-class>fr.javatheque.util.TestEnvironmentFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>testEnvironmentFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
 	<jsp-config>
 		<taglib>
 			<taglib-uri>http://java.sun.com/jstl/core</taglib-uri>
 			<taglib-location>/WEB-INF/tld/c.tld</taglib-location>
 		</taglib>
 	</jsp-config>
+
 	<servlet>
 		<servlet-name>LoginServlet</servlet-name>
 		<servlet-class>fr.javatheque.servlets.LoginServlet</servlet-class>
@@ -16,6 +28,7 @@
 		<servlet-name>LoginServlet</servlet-name>
 		<url-pattern>/login</url-pattern>
 	</servlet-mapping>
+
 	<servlet>
 		<servlet-name>LogoutServlet</servlet-name>
 		<servlet-class>fr.javatheque.servlets.LogoutServlet</servlet-class>
@@ -24,6 +37,7 @@
 		<servlet-name>LogoutServlet</servlet-name>
 		<url-pattern>/logout</url-pattern>
 	</servlet-mapping>
+
 	<servlet>
 		<servlet-name>RegisterServlet</servlet-name>
 		<servlet-class>fr.javatheque.servlets.RegisterServlet</servlet-class>
@@ -32,6 +46,7 @@
 		<servlet-name>RegisterServlet</servlet-name>
 		<url-pattern>/register</url-pattern>
 	</servlet-mapping>
+
 	<servlet>
 		<servlet-name>LibraryServlet</servlet-name>
 		<servlet-class>fr.javatheque.servlets.LibraryServlet</servlet-class>
@@ -40,6 +55,7 @@
 		<servlet-name>LibraryServlet</servlet-name>
 		<url-pattern>/library</url-pattern>
 	</servlet-mapping>
+
 	<servlet>
 		<servlet-name>WelcomeServlet</servlet-name>
 		<servlet-class>fr.javatheque.servlets.WelcomeServlet</servlet-class>
@@ -48,13 +64,13 @@
 		<servlet-name>WelcomeServlet</servlet-name>
 		<url-pattern>/</url-pattern>
 	</servlet-mapping>
-	    <servlet>
-        <servlet-name>FilmServlet</servlet-name>
-        <servlet-class>fr.javatheque.servlets.FilmServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>FilmServlet</servlet-name>
-		<url-pattern>/film/*</url-pattern>
-    </servlet-mapping>
-</web-app>
 
+	<servlet>
+		<servlet-name>FilmServlet</servlet-name>
+		<servlet-class>fr.javatheque.servlets.FilmServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>FilmServlet</servlet-name>
+		<url-pattern>/film/*</url-pattern>
+	</servlet-mapping>
+</web-app>

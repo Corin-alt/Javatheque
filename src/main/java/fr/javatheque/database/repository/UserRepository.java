@@ -3,9 +3,9 @@ package fr.javatheque.database.repository;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Filters;
-import fr.javatheque.database.MongoDBConnection;
 import fr.javatheque.database.model.Library;
 import fr.javatheque.database.model.User;
+import fr.javatheque.util.DatabaseUtils;
 import jakarta.ejb.Stateless;
 import org.bson.Document;
 
@@ -17,7 +17,7 @@ import java.util.Optional;
  * This class provides methods to perform CRUD operations on user documents in MongoDB.
  */
 @Stateless
-public class UserRepository {
+public class UserRepository  {
 
     private static final String USER_ID_KEY = "user_id";
     private static final String LIBRARY_ID_KEY = "library_id";
@@ -29,12 +29,10 @@ public class UserRepository {
     private final MongoCollection<Document> collection;
     private final LibraryRepository libraryRepository;
 
-    /**
-     * Constructs a UserRepository object.
-     */
+
     public UserRepository() {
         this.libraryRepository = new LibraryRepository();
-        this.collection = MongoDBConnection.getJavathequeDatabase().getCollection("users");
+        this.collection = DatabaseUtils.getDatabase().getCollection("users");
     }
 
     /**
@@ -73,7 +71,7 @@ public class UserRepository {
      * @return An optional containing the user object, if found.
      */
     public Optional<User> getUserById(String id) {
-        Document document = collection.find(Filters.eq("user_id", id)).first();
+        Document document = collection.find(Filters.eq(USER_ID_KEY, id)).first();
         return document != null ? Optional.of(documentToUser(document)) : Optional.empty();
     }
 
@@ -84,7 +82,7 @@ public class UserRepository {
      * @return An optional containing the user object, if found.
      */
     public Optional<User> getUserByEmail(String email) {
-        Document document = collection.find(Filters.eq("email", email)).first();
+        Document document = collection.find(Filters.eq(EMAIL_KEY, email)).first();
         return document != null ? Optional.of(documentToUser(document)) : Optional.empty();
     }
 
@@ -95,7 +93,7 @@ public class UserRepository {
      */
     public void updateUser(User user) {
         Document document = createUserDocument(user);
-        collection.replaceOne(Filters.eq("user_id", user.getId()), document);
+        collection.replaceOne(Filters.eq(USER_ID_KEY, user.getId()), document);
     }
 
     /**
@@ -104,7 +102,7 @@ public class UserRepository {
      * @param id The ID of the user to delete.
      */
     public void deleteUserWithID(String id) {
-        collection.deleteOne(Filters.eq("user_id", id));
+        collection.deleteOne(Filters.eq(USER_ID_KEY, id));
     }
 
     /**
@@ -113,7 +111,7 @@ public class UserRepository {
      * @param email The email of the user to delete.
      */
     public void deleteUserWithEmail(String email) {
-        collection.deleteOne(Filters.eq("email", email));
+        collection.deleteOne(Filters.eq(EMAIL_KEY, email));
     }
 
     /**

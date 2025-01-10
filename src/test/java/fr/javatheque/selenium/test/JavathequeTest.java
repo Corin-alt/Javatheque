@@ -1,7 +1,7 @@
-package fr.javatheque.test;
+package fr.javatheque.selenium.test;
 
-import fr.javatheque.config.WebDriverConfig;
-import fr.javatheque.pages.*;
+import fr.javatheque.selenium.config.WebDriverConfig;
+import fr.javatheque.selenium.pages.*;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.WebDriver;
 

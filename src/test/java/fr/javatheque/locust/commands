@@ -1,0 +1,11 @@
+Install :
+
+pip install locust
+
+Stress test :
+
+locust --host=http://localhost:8080/javatheque --users 1000 --spawn-rate 100 --run-time 1m --headless --html=stress_report.html
+
+Monté en charge :
+
+locust --host=http://localhost:8080/javatheque --users 500 --spawn-rate 10 --run-time 15m --headless --html=load_report.html
