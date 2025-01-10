@@ -5,6 +5,8 @@ import fr.javatheque.selenium.pages.*;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.WebDriver;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -12,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class JavathequeTest {
     private WebDriver driver;
     private static final String BASE_URL = System.getProperty("baseUrl", "http://localhost:8080/javatheque");
-    private static final String email = "test" + "-" + System.currentTimeMillis() + "@example.com";
+    private static final String email = "test" + "-" + UUID.randomUUID() + "@test.com";
     private static final String password = "TestPassword123";
     private static final String firstname = "John";
     private static final String lastname = "Doe";

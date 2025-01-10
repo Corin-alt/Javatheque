@@ -6,21 +6,17 @@ import time
 import uuid
 from pymongo import MongoClient
 
-# Configuration du logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration de la base de données de test
 MONGODB_URI = "mongodb://root:root@localhost:27017"
 TEST_DB_NAME = "javatheque-locust"
 mongodb_client = None
 
 def setup_test_database():
-    """Configure la base de données de test"""
     client = MongoClient(MONGODB_URI)
     db = client[TEST_DB_NAME]
 
-    # Création des collections si elles n'existent pas
     collections = ["users", "libraries", "films"]
     existing_collections = db.list_collection_names()
 
@@ -32,7 +28,6 @@ def setup_test_database():
     return client
 
 def cleanup_test_database():
-    """Nettoie la base de données de test"""
     if mongodb_client:
         db = mongodb_client[TEST_DB_NAME]
         collections = ["users", "libraries", "films"]
@@ -56,12 +51,9 @@ class NetflixTestUser(HttpUser):
         }
 
     def on_start(self):
-        """Connexion de l'utilisateur test"""
         try:
-            # Ajout du header pour indiquer l'utilisation de la base de test
             self.client.headers.update({'X-Test-Database': 'true'})
 
-            # Tentative de connexion
             with self.client.post("/login", data={
                 "email": self.TEST_USER["email"],
                 "password": self.TEST_USER["password"]
@@ -78,7 +70,6 @@ class NetflixTestUser(HttpUser):
             logger.error(f"Error during login: {str(e)}")
 
     def register_test_user(self):
-        """Création de l'utilisateur de test"""
         try:
             with self.client.post("/register",
                 data={
@@ -105,7 +96,6 @@ class NetflixTestUser(HttpUser):
 
     @task(3)
     def view_library(self):
-        """Consultation de la bibliothèque"""
         if not self.logged_in:
             return
 
@@ -123,7 +113,6 @@ class NetflixTestUser(HttpUser):
 
     @task(2)
     def search_films(self):
-        """Recherche de films"""
         if not self.logged_in:
             return
 
@@ -143,7 +132,6 @@ class NetflixTestUser(HttpUser):
 
     @task(2)
     def add_film_to_library(self):
-        """Ajout d'un film à la bibliothèque"""
         if not self.logged_in:
             return
 
@@ -171,7 +159,6 @@ class NetflixTestUser(HttpUser):
 
     @task(1)
     def show_film(self):
-        """Afficher un film"""
         if not self.logged_in or not self.film_ids:
             return
 
@@ -189,7 +176,6 @@ class NetflixTestUser(HttpUser):
 
     @task(1)
     def update_film(self):
-        """Mise à jour d'un film"""
         if not self.logged_in or not self.film_ids:
             return
 
@@ -232,7 +218,7 @@ def on_test_start(environment, **kwargs):
     global mongodb_client
     try:
         mongodb_client = setup_test_database()
-        cleanup_test_database()  # Nettoie la base de test au démarrage
+        cleanup_test_database()
         logger.info("Test database initialized and cleaned")
     except Exception as e:
         logger.error(f"Failed to initialize test database: {str(e)}")
@@ -242,7 +228,7 @@ def on_test_stop(environment, **kwargs):
     """Nettoyage après la fin des tests"""
     logger.info("Test completed.")
     try:
-        cleanup_test_database()  # Nettoie la base de test à la fin
+        cleanup_test_database()
         if mongodb_client:
             mongodb_client.close()
         logger.info("Test database cleaned up and connection closed")
