@@ -1,4 +1,4 @@
-package fr.javatheque.config;
+package fr.javatheque.selenium.config;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.WebDriver;

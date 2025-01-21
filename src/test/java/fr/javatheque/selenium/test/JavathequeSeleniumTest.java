@@ -1,18 +1,21 @@
-package fr.javatheque.test;
+package fr.javatheque.selenium.test;
 
-import fr.javatheque.config.WebDriverConfig;
-import fr.javatheque.pages.*;
+import fr.javatheque.selenium.config.WebDriverConfig;
+import fr.javatheque.selenium.pages.*;
+import fr.javatheque.util.DatabaseUtils;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.WebDriver;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class JavathequeTest {
+public class JavathequeSeleniumTest {
     private WebDriver driver;
     private static final String BASE_URL = System.getProperty("baseUrl", "http://localhost:8080/javatheque");
-    private static final String email = "test" + "-" + System.currentTimeMillis() + "@example.com";
+    private static final String email = "test" + "-" + UUID.randomUUID() + "@test.com";
     private static final String password = "TestPassword123";
     private static final String firstname = "John";
     private static final String lastname = "Doe";
@@ -26,6 +29,8 @@ public class JavathequeTest {
 
     @BeforeAll
     void setup() {
+        DatabaseUtils.setTestEnvironment(true);
+
         boolean headless = Boolean.parseBoolean(System.getProperty("headless", "true"));
         driver = WebDriverConfig.createChromeDriver(headless);
 
@@ -41,6 +46,9 @@ public class JavathequeTest {
         if (driver != null) {
             driver.quit();
         }
+        DatabaseUtils.clearDatabase();
+        DatabaseUtils.clearEnvironment();
+        DatabaseUtils.setTestEnvironment(false);
     }
 
     private void waitBriefly() {

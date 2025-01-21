@@ -7,13 +7,18 @@ import org.bson.Document;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 /**
  * This class provides methods for converting Person objects to Document objects
  * and vice versa for MongoDB operations.
  */
 @Stateless
 public class PersonRepository {
+
+    private static final String LASTNAME_KEY = "lastname";
+    private static final String FIRSTNAME_KEY = "firstname";
+
+    public PersonRepository() {
+    }
 
     /**
      * Converts a Person object to a Document.
@@ -23,8 +28,8 @@ public class PersonRepository {
      */
     public Document toDocument(Person person) {
         return new Document()
-                .append("lastname", person.getLastname())
-                .append("firstname", person.getFirstname());
+                .append(LASTNAME_KEY, person.getLastname())
+                .append(FIRSTNAME_KEY, person.getFirstname());
     }
 
     /**
@@ -46,8 +51,8 @@ public class PersonRepository {
      * @return The Person object represented by the Document.
      */
     public Person toPerson(Document document) {
-        String lastname = document.getString("lastname");
-        String firstname = document.getString("firstname");
+        String lastname = document.getString(LASTNAME_KEY);
+        String firstname = document.getString(FIRSTNAME_KEY);
         return new Person(lastname, firstname);
     }
 

@@ -1,15 +1,4 @@
 services:
-  app:
-    image: ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
-    container_name: javatheque
-    ports:
-      - 8080:8080
-      - 4848:4848
-    volumes:
-      - ${APP_DEPLOY_PATH}:/opt/glassfish7/glassfish/domains/domain1/autodeploy
-    depends_on:
-      - db
-
   db:
     image: mongo
     container_name: test-mongo

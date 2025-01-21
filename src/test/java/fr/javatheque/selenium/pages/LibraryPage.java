@@ -1,4 +1,4 @@
-package fr.javatheque.pages;
+package fr.javatheque.selenium.pages;
 
 import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;

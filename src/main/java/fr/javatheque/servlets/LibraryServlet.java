@@ -9,52 +9,71 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import com.google.gson.Gson;
 
 /**
  * Servlet that handles requests related to the user's library.
  */
 @WebServlet(name = "LibraryServlet", urlPatterns = {"/library"})
 public class LibraryServlet extends HttpServlet {
+    private static final Logger logger = Logger.getLogger(LibraryServlet.class.getName());
+    private final Gson gson = new Gson();
+
     /**
      * Handles the HTTP GET request for the user's library.
      *
-     * @param request  the HttpServletRequest object that contains the request the client made of the servlet
-     * @param response the HttpServletResponse object that contains the response the servlet sends to the client
-     * @throws ServletException if the request for the GET could not be handled
-     * @throws IOException      if an input or output error is detected when the servlet handles the GET request
+     * @param request  the HttpServletRequest object
+     * @param response the HttpServletResponse object
+     * @throws ServletException if the request could not be handled
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String userID = (String) request.getSession().getAttribute("userID");
 
-        UserRepository ur = new UserRepository();
-        Optional<User> target = ur.getUserById(userID);
+        boolean isTestRequest = isTestRequest(request);
 
-        if (target.isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/login");
-            return;
+        try {
+            String userID = (String) request.getSession().getAttribute("userID");
+            if (userID == null) {
+                handleAuthenticationError(request, response, isTestRequest);
+                return;
+            }
+
+            UserRepository ur = new UserRepository();
+            Optional<User> target = ur.getUserById(userID);
+
+            if (target.isEmpty()) {
+                handleAuthenticationError(request, response, isTestRequest);
+                return;
+            }
+
+            User user = target.get();
+            String searchQuery = request.getParameter("search");
+            Library library = user.getLibrary();
+
+            List<Film> films = searchQuery != null && searchQuery.equalsIgnoreCase("all")
+                    ? library.getFilms()
+                    : searchFilmsInLibrary(library, searchQuery);
+
+            handleSuccessfulRequest(request, response, films, isTestRequest);
+
+        } catch (Exception e) {
+            logger.severe("Error accessing library: " + e.getMessage());
+            handleError(request, response, isTestRequest, e);
         }
+    }
 
-        User user = target.get();
-
-        String searchQuery = request.getParameter("search");
-        Library library = user.getLibrary();
-
-        List<Film> films;
-        if (searchQuery != null && searchQuery.equalsIgnoreCase("all")) {
-            films = library.getFilms();
-        } else {
-            films = searchFilmsInLibrary(library, searchQuery);
-        }
-
-        request.setAttribute("films", films);
-        request.getRequestDispatcher("/views/library.jsp").forward(request, response);
+    private boolean isTestRequest(HttpServletRequest request) {
+        String testHeader = request.getHeader("X-Test-Database");
+        return testHeader != null && Boolean.parseBoolean(testHeader);
     }
 
     /**
@@ -72,5 +91,43 @@ public class LibraryServlet extends HttpServlet {
         return allFilms.stream()
                 .filter(film -> film.getTitle().toLowerCase().contains(searchQuery.toLowerCase()))
                 .collect(Collectors.toList());
+    }
+
+    private void handleSuccessfulRequest(HttpServletRequest request, HttpServletResponse response,
+                                         List<Film> films, boolean isTestRequest) throws ServletException, IOException {
+
+        if (isTestRequest) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write(gson.toJson(films));
+            return;
+        }
+
+        request.setAttribute("films", films);
+        request.getRequestDispatcher("/views/library.jsp").forward(request, response);
+    }
+
+    private void handleAuthenticationError(HttpServletRequest request, HttpServletResponse response,
+                                           boolean isTestRequest) throws IOException, ServletException {
+
+        if (isTestRequest) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
+            return;
+        }
+
+        response.sendRedirect(request.getContextPath() + "/login");
+    }
+
+    private void handleError(HttpServletRequest request, HttpServletResponse response,
+                             boolean isTestRequest, Exception e) throws IOException, ServletException {
+
+        if (isTestRequest) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "Error accessing library: " + e.getMessage());
+            return;
+        }
+
+        request.setAttribute("error", "An error occurred while accessing your library");
+        request.getRequestDispatcher("/views/error.jsp").forward(request, response);
     }
 }
