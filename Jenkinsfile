@@ -10,7 +10,7 @@ pipeline {
         
         stage('Build') {
             steps {
-                // Ajoutez vos commandes de build ici
+                // Ajoutez vos commandes de build ici...
                 sh 'echo "Building..."'
             }
         }
