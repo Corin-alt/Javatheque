@@ -1,23 +1,29 @@
 pipeline {
-    agent any
-
+    agent {
+        docker {
+            image 'ubuntu:latest'
+            args '-u root'
+        }
+    }
+    
     options {
         buildDiscarder logRotator(
-            artifactDaysToKeepStr: '', 
-            artifactNumToKeepStr: '', 
-            daysToKeepStr: '', 
+            artifactDaysToKeepStr: '',
+            artifactNumToKeepStr: '',
+            daysToKeepStr: '',
             numToKeepStr: '2'
         )
     }
-
+    
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
         DOCKER_TAG = 'latest'
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
-
-        DEPLOY_SERVER = credentials('deploy-server') 
+        
+        DEPLOY_SERVER = credentials('deploy-server')
+        
         APP_CODE_PATH = '/apps/java/src'
         APP_DEPLOY_PATH = '/apps/java/deploy'
         
@@ -42,7 +48,7 @@ pipeline {
                 script {
                     sh '''
                         apt-get update
-                        apt-get install -y wget gnupg
+                        apt-get install -y wget gnupg curl
                         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
                         echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
                         apt-get update
@@ -51,6 +57,7 @@ pipeline {
                         CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1)
                         wget -N "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}"
                         wget -N "https://chromedriver.storage.googleapis.com/$(cat LATEST_RELEASE_${CHROME_VERSION})/chromedriver_linux64.zip"
+                        apt-get install -y unzip
                         unzip chromedriver_linux64.zip
                         mv chromedriver /usr/local/bin/
                         chmod +x /usr/local/bin/chromedriver
