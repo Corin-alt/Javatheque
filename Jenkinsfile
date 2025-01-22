@@ -168,7 +168,7 @@ pipeline {
                     
                     // Configuration GlassFish
                     unstash 'glassfish'
-                    
+
                     sh '''
                         mkdir -p ${GLASSFISH_HOME}
                         cp -r glassfish7/. ${GLASSFISH_HOME}/
@@ -192,16 +192,6 @@ pipeline {
                         fi
                         
                         ls -l $WAR_PATH
-                        
-                        echo "Démarrage du domaine GlassFish..."
-                        ${GLASSFISH_HOME}/bin/asadmin start-domain domain1 || true
-                        
-                        echo "Tentative de déploiement..."
-                        ${GLASSFISH_HOME}/bin/asadmin deploy --force=true $WAR_PATH || {
-                            echo "Échec du déploiement, affichage des logs..."
-                            cat ${GLASSFISH_HOME}/domains/domain1/logs/server.log
-                            exit 1
-                        }
                     '''
                 }
             }
