@@ -91,6 +91,9 @@ pipeline {
                     sh '''
                         # Nettoyage préalable
                         rm -rf glassfish7 ${GLASSFISH_HOME}
+                        
+                        # Création du répertoire de destination
+                        echo "Creating destination directory..."
                         mkdir -p ${GLASSFISH_HOME}
                         
                         # Vérifier l'espace disque
@@ -107,8 +110,11 @@ pipeline {
                         
                         echo "Moving GlassFish to /opt..."
                         if [ -d "glassfish7" ]; then
-                            rm -rf ${GLASSFISH_HOME}
-                            mv glassfish7/* ${GLASSFISH_HOME}/
+                            # S'assurer que le répertoire existe
+                            mkdir -p ${GLASSFISH_HOME}
+                            
+                            echo "Moving files..."
+                            cp -r glassfish7/. ${GLASSFISH_HOME}/
                             
                             echo "Setting permissions..."
                             chmod -R 755 ${GLASSFISH_HOME}
