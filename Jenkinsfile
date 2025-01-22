@@ -1,5 +1,10 @@
 pipeline {
-    agent none
+    agent {
+        docker {
+            image 'ubuntu:latest'
+            args '-u root'
+        }
+    }
         
     environment {
         APP_NAME = 'javatheque'
@@ -7,34 +12,13 @@ pipeline {
         DOCKER_TAG = 'latest'
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
-
-        // Credentials 
-        GITHUB_TOKEN = credentials('github-token')
-        DEPLOY_SERVER = credentials('deploy-server')
-        DB_USER = credentials('db_user')
-        DB_NAME = credentials('db_name')
-        DB_PASSWORD = credentials('db_password')
+        GLASSFISH_HOME = '/opt/glassfish7'
         DB_HOST = 'localhost'
         DB_PORT = '27017'
-
-        // Paths
-        APP_CODE_PATH = '/apps/java/src'
-        APP_DEPLOY_PATH = '/apps/java/deploy'
-        GLASSFISH_HOME = '/opt/glassfish7'
-
-        // Flags and Options
-        DOCKERFILE_CHANGED = 'false'
-        CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
     }
         
     stages {
         stage('Build & Test') {
-            agent {
-                docker {
-                    image 'ubuntu:latest'
-                    args '-u root'
-                }
-            }
             steps {
                 script {
                     sh '''
@@ -42,7 +26,17 @@ pipeline {
                         apt-get update
                         apt-get install -y wget gnupg curl unzip
                         
-                        # Chrome et ChromeDriver
+                        # Install Java 17
+                        echo "Installing Java 17..."
+                        apt-get install -y software-properties-common
+                        add-apt-repository -y ppa:openjdk-r/ppa
+                        apt-get update
+                        apt-get install -y openjdk-17-jdk
+                        
+                        echo "Verifying Java installation..."
+                        java -version
+                        
+                        # Chrome and ChromeDriver installation
                         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
                         echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
                         apt-get update
@@ -55,52 +49,71 @@ pipeline {
                         mv chromedriver /usr/local/bin/
                         chmod +x /usr/local/bin/chromedriver
                         
-                        # GlassFish
-                        wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
-                        unzip glassfish-7.0.0.zip -d /opt/
+                        # GlassFish installation with verbose output
+                        echo "Starting GlassFish installation..."
+                        
+                        echo "Downloading GlassFish..."
+                        wget -v https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
+                        
+                        echo "Listing current /opt directory..."
+                        ls -la /opt/
+                        
+                        echo "Unzipping GlassFish..."
+                        unzip -v glassfish-7.0.0.zip -d /opt/
+                        
+                        echo "Verifying GlassFish installation..."
+                        ls -la /opt/glassfish7
+                        ls -la ${GLASSFISH_HOME}/bin
+                        
+                        echo "Setting permissions..."
                         chmod -R +x ${GLASSFISH_HOME}/bin
+                        
+                        echo "Verifying final permissions..."
+                        ls -la ${GLASSFISH_HOME}/bin/asadmin
+                        
+                        echo "Checking GlassFish version..."
+                        ${GLASSFISH_HOME}/bin/asadmin version || echo "Failed to get version"
                     '''
                 }
             }
         }
         stage('Checkout & Build application') {
-            agent {
-                docker {
-                    image 'ubuntu:latest'
-                    args '-u root'
-                }
-            }
             steps {
                 script {
                     checkout([$class: 'GitSCM', 
                             branches: [[name: '*/main']], 
                             extensions: [[$class: 'CloneOption', depth: 1, noTags: true]]])
 
-                    def dbUrl = "mongodb://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}"
-                    
-                    sh """
-                        ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
-                    
-                        timeout 60 bash -c 'until ${GLASSFISH_HOME}/bin/asadmin list-domains | grep "domain1 running"; do sleep 2; done'
-
-                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
-                            --restype=java.lang.String \
-                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
-                            --property value=${dbUrl} \
-                            mongodb/url || exit 1
+                    withCredentials([
+                        usernamePassword(credentialsId: 'db_user', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
+                        string(credentialsId: 'db_name', variable: 'DB_NAME')
+                    ]) {
+                        def dbUrl = 'mongodb://' + DB_USER + ':' + DB_PASSWORD + '@' + env.DB_HOST + ':' + env.DB_PORT + '/' + DB_NAME
                         
-                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
-                            --restype=java.lang.String \
-                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
-                            --property value=${env.DB_USER} \
-                            mongodb/user || exit 1
+                        sh """#!/bin/bash -e
+                            ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
+                        
+                            timeout 60 bash -c 'until ${GLASSFISH_HOME}/bin/asadmin list-domains | grep "domain1 running"; do sleep 2; done'
+
+                            ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                                --restype=java.lang.String \\
+                                --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                                --property value='\${dbUrl}' \\
+                                mongodb/url || true
                             
-                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
-                            --restype=java.lang.String \
-                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
-                            --property value=${env.DB_PASSWORD} \
-                            mongodb/password || exit 1
-                    """
+                            ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                                --restype=java.lang.String \\
+                                --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                                --property value='\${DB_USER}' \\
+                                mongodb/user || true
+                                
+                            ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                                --restype=java.lang.String \\
+                                --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                                --property value='\${DB_PASSWORD}' \\
+                                mongodb/password || true
+                        """
+                    }
                     
                     def buildResult = sh(script: 'mvn clean package -DskipTests', returnStatus: true)
                     if (buildResult != 0) {
