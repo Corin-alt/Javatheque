@@ -19,8 +19,7 @@ pipeline {
         DB_NAME = credentials('db_name')
         DB_PASSWORD = credentials('db_password')
         DB_URL = "mongodb://${DB_USER}:${DB_PASSWORD}@localhost:27017/${DB_NAME}"
-        env.MONGODB_URL = mongoUrl
-        
+ 
         // Paths
         APP_CODE_PATH = '/apps/java/src'
         APP_DEPLOY_PATH = '/apps/java/deploy'
