@@ -1,10 +1,6 @@
 pipeline {
     agent none
-    
-    options {
-        copyArtifactPermission('*')
-    }
-
+        
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -84,10 +80,8 @@ pipeline {
                         find ${WORKSPACE}/glassfish7/ -type d -exec chmod 755 {} +
                     '''
                     
-                    // Stash GlassFish from workspace with allowEmpty
                     stash includes: 'glassfish7/**', name: 'glassfish', allowEmpty: false
                     
-                    // Vérifier que le stash a bien été créé
                     echo "Verifying stash contents..."
                     sh 'find ${WORKSPACE}/glassfish7 -type f | wc -l'
                 }
@@ -103,96 +97,89 @@ pipeline {
             }
             steps {
                 script {
-                    // Configuration GlassFish...
+                    sh '''
+                        # Nettoyage préalable
+                        rm -rf glassfish7 ${GLASSFISH_HOME}
+                        
+                        # Création du répertoire de destination
+                        echo "Creating destination directory..."
+                        mkdir -p ${GLASSFISH_HOME}
+                        
+                        # Vérifier l'espace disque
+                        df -h
+                    '''
+                    
                     unstash 'glassfish'
                     
                     sh '''
-                        mkdir -p ${GLASSFISH_HOME}
-                        cp -r glassfish7/. ${GLASSFISH_HOME}/
-                        chmod -R 755 ${GLASSFISH_HOME}
-                        chmod -R +x ${GLASSFISH_HOME}/bin
-                    '''
-                    
-                    // Build et création du WAR
-                    sh '''
-                        mvn clean package -DskipTests
+                        echo "Checking unstashed content..."
+                        ls -la
                         
-                        echo "Vérification du WAR..."
-                        WAR_FILE="target/javatheque.war"
-                        if [ ! -f "$WAR_FILE" ]; then
-                            echo "ERROR: Le fichier WAR n'a pas été créé"
+                        echo "Moving GlassFish to /opt..."
+                        if [ -d "glassfish7" ]; then
+                            # S'assurer que le répertoire existe
+                            mkdir -p ${GLASSFISH_HOME}
+                            
+                            echo "Moving files..."
+                            cp -r glassfish7/. ${GLASSFISH_HOME}/
+                            
+                            echo "Setting permissions..."
+                            chmod -R 755 ${GLASSFISH_HOME}
+                            chmod -R +x ${GLASSFISH_HOME}/bin
+                            ls -la ${GLASSFISH_HOME}/bin/
+                        
+                            echo "Testing GlassFish..."
+                            if [ -f "${GLASSFISH_HOME}/bin/asadmin" ]; then
+                                ${GLASSFISH_HOME}/bin/asadmin version
+                            else
+                                echo "ERROR: asadmin not found in ${GLASSFISH_HOME}/bin/"
+                                ls -la ${GLASSFISH_HOME}/bin/
+                                exit 1
+                            fi
+                        else
+                            echo "ERROR: glassfish7 directory not found after unstash"
+                            ls -la
                             exit 1
                         fi
-                        
-                        # Vérifier la taille du fichier
-                        WAR_SIZE=$(stat -f%z "$WAR_FILE" 2>/dev/null || stat -c%s "$WAR_FILE")
-                        if [ "$WAR_SIZE" -eq 0 ]; then
-                            echo "ERROR: Le fichier WAR est vide"
-                            exit 1
-                        fi
-                        
-                        echo "WAR créé avec succès (taille: $WAR_SIZE bytes)"
-                        
-                        # S'assurer que le fichier est accessible
-                        chmod 644 "$WAR_FILE"
                     '''
                     
-                    // Stash le WAR pour une utilisation ultérieure
+                    checkout([$class: 'GitSCM', 
+                            branches: [[name: '*/main']], 
+                            extensions: [[$class: 'CloneOption', depth: 1, noTags: true]]])
+
+                    def dbUrl = 'mongodb://' + env.DB_USER + ':' + env.DB_PASSWORD + '@' + env.DB_HOST + ':' + env.DB_PORT + '/' + env.DB_NAME
+                    
+                    sh """#!/bin/bash -e
+                        ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
+                    
+                        timeout 60 bash -c 'until ${GLASSFISH_HOME}/bin/asadmin list-domains | grep "domain1 running"; do sleep 2; done'
+
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                            --restype=java.lang.String \\
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                            --property value='\${dbUrl}' \\
+                            mongodb/url || true
+                        
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                            --restype=java.lang.String \\
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                            --property value='\${DB_USER}' \\
+                            mongodb/user || true
+                            
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                            --restype=java.lang.String \\
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                            --property value='\${DB_PASSWORD}' \\
+                            mongodb/password || true
+                    """
+                    
+                    sh 'mvn clean package -DskipTests'
+
                     stash includes: 'target/*.war', name: 'war-file', allowEmpty: false
                     
-                    // Archiver aussi pour la traçabilité
                     archiveArtifacts artifacts: 'target/*.war', 
                                 fingerprint: true,
                                 onlyIfSuccessful: true
-                }
-            }
-        }
-
-        stage('Check retrieving WAR file') {
-            agent {
-                docker {
-                    image 'maven:3.9-eclipse-temurin-17'
-                    args '-u root'
-                }
-            }
-            steps {
-                script {
-                    // Création des répertoires avec permissions
-                    sh '''
-                        mkdir -p ${WORKSPACE}/target
-                        chmod -R 755 ${WORKSPACE}/target
-                    '''
-                    
-                    // Récupérer le WAR via unstash au lieu de copyArtifacts
-                    unstash 'war-file'
-                    
-                    // Configuration GlassFish
-                    unstash 'glassfish'
-
-                    sh '''
-                        mkdir -p ${GLASSFISH_HOME}
-                        cp -r glassfish7/. ${GLASSFISH_HOME}/
-                        chmod -R 755 ${GLASSFISH_HOME}
-                        chmod -R +x ${GLASSFISH_HOME}/bin
-                        
-                        # Vérification du WAR
-                        echo "Vérification du WAR..."
-                        WAR_PATH=$(find ${WORKSPACE}/target -name "*.war")
-                        if [ -z "$WAR_PATH" ]; then
-                            echo "ERROR: WAR non trouvé après unstash"
-                            exit 1
-                        fi
-                        
-                        WAR_SIZE=$(stat -f%z "$WAR_PATH" 2>/dev/null || stat -c%s "$WAR_PATH")
-                        echo "WAR trouvé: $WAR_PATH (taille: $WAR_SIZE bytes)"
-                        
-                        if [ "$WAR_SIZE" -eq 0 ]; then
-                            echo "ERROR: Le fichier WAR est vide"
-                            exit 1
-                        fi
-                        
-                        ls -l $WAR_PATH
-                    '''
                 }
             }
         }
@@ -208,7 +195,7 @@ pipeline {
                             ${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true
                         fi
                     '''
-                }
+                }                
                 cleanWs()
             }
         }
