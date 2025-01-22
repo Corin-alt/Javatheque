@@ -66,7 +66,7 @@ pipeline {
                         
                         # S'assurer que les permissions sont correctes
                         chmod -R 644 ${WORKSPACE}/glassfish7/
-                        find ${WORKSPACE}/glassfish7/ -type d -exec chmod 755 {} \;
+                        find ${WORKSPACE}/glassfish7/ -type d -exec chmod 755 {} +
                     '''
                     
                     // Stash GlassFish from workspace with allowEmpty
