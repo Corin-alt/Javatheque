@@ -28,10 +28,13 @@ pipeline {
                         
                         # Install Java 17
                         echo "Installing Java 17..."
-                        apt-get install -y software-properties-common
-                        add-apt-repository -y ppa:openjdk-r/ppa
+                        apt-get install -y wget
+                        apt-get update && apt-get install -y apt-transport-https ca-certificates
+                        mkdir -p /etc/apt/keyrings
+                        wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | tee /etc/apt/keyrings/adoptium.asc
+                        echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list
                         apt-get update
-                        apt-get install -y openjdk-17-jdk
+                        apt-get install -y temurin-17-jdk
                         
                         echo "Verifying Java installation..."
                         java -version
@@ -49,30 +52,52 @@ pipeline {
                         mv chromedriver /usr/local/bin/
                         chmod +x /usr/local/bin/chromedriver
                         
-                        # GlassFish installation with verbose output
+                        # GlassFish installation with verbose output and additional checks
                         echo "Starting GlassFish installation..."
                         
                         echo "Downloading GlassFish..."
                         wget -v https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
                         
-                        echo "Listing current /opt directory..."
-                        ls -la /opt/
+                        echo "Cleaning any existing GlassFish installation..."
+                        rm -rf /opt/glassfish7
                         
-                        echo "Unzipping GlassFish..."
-                        unzip -v glassfish-7.0.0.zip -d /opt/
+                        echo "Creating GlassFish directory..."
+                        mkdir -p /opt/glassfish7
                         
-                        echo "Verifying GlassFish installation..."
-                        ls -la /opt/glassfish7
-                        ls -la ${GLASSFISH_HOME}/bin
+                        echo "Unzipping GlassFish with full permissions..."
+                        unzip -o glassfish-7.0.0.zip -d /opt/
                         
-                        echo "Setting permissions..."
+                        echo "Setting correct ownership and permissions..."
+                        chown -R root:root ${GLASSFISH_HOME}
+                        chmod -R 755 ${GLASSFISH_HOME}
                         chmod -R +x ${GLASSFISH_HOME}/bin
                         
-                        echo "Verifying final permissions..."
+                        echo "Verifying installation structure..."
+                        if [ ! -f "${GLASSFISH_HOME}/bin/asadmin" ]; then
+                            echo "asadmin not found in expected location"
+                            find /opt -name asadmin
+                            exit 1
+                        fi
+                        
+                        echo "Verifying GlassFish bin contents:"
+                        ls -la ${GLASSFISH_HOME}/bin
+                        
+                        echo "Verifying executable permissions:"
                         ls -la ${GLASSFISH_HOME}/bin/asadmin
                         
-                        echo "Checking GlassFish version..."
-                        ${GLASSFISH_HOME}/bin/asadmin version || echo "Failed to get version"
+                        echo "Checking Java environment for GlassFish:"
+                        echo "JAVA_HOME=$JAVA_HOME"
+                        echo "PATH=$PATH"
+                        
+                        echo "Testing GlassFish asadmin:"
+                        ${GLASSFISH_HOME}/bin/asadmin version || {
+                            echo "Failed to get GlassFish version"
+                            echo "Checking if asadmin is executable:"
+                            file ${GLASSFISH_HOME}/bin/asadmin
+                            echo "Checking asadmin contents:"
+                            head -n 5 ${GLASSFISH_HOME}/bin/asadmin
+                            exit 1
+                        }
                     '''
                 }
             }
@@ -88,6 +113,7 @@ pipeline {
                         usernamePassword(credentialsId: 'db_user', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
                         string(credentialsId: 'db_name', variable: 'DB_NAME')
                     ]) {
+                        // Construct MongoDB URL using single quotes to prevent interpolation
                         def dbUrl = 'mongodb://' + DB_USER + ':' + DB_PASSWORD + '@' + env.DB_HOST + ':' + env.DB_PORT + '/' + DB_NAME
                         
                         sh """#!/bin/bash -e
