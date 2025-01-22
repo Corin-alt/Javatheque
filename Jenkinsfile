@@ -1,15 +1,6 @@
 pipeline {
     agent any
 
-    options {
-        buildDiscarder logRotator(
-            artifactDaysToKeepStr: '', 
-            artifactNumToKeepStr: '', 
-            daysToKeepStr: '', 
-            numToKeepStr: '2'
-        )
-    }
-
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -32,14 +23,14 @@ pipeline {
     
     tools {
         maven 'Maven'
-        docker 'Docker'
+        dockerTool 'Docker'
         jdk 'JDK17'
     }
     
     stages {
         stage('Setup Environment') {
             steps {
-                echo "Setup Environment"
+                echo "Setup Environment..."
                 script {
                     sh '''
                         apt-get update
