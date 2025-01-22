@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'ubuntu:latest'
-            args '-u root'
-        }
-    }
+    agent any
 
     triggers {
         githubPush()
