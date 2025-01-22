@@ -5,7 +5,6 @@ pipeline {
         githubPush()
     }
 
-    
     options {
         buildDiscarder logRotator(
             artifactDaysToKeepStr: '', 
@@ -31,7 +30,7 @@ pipeline {
         GLASSFISH_HOME = '/opt/glassfish7'
         CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
 
-        // DB_URL = credentials('db_url')        // URL de la base de données
+        // DB_URL = credentials('db_url')        // URL de la base de données.
         // DB_USER = credentials('db_user')      // Nom d'utilisateur de la base de données
         // DB_PASSWORD = credentials('db_password')  // Mot de passe de la base de données
     }
