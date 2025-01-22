@@ -69,8 +69,10 @@ pipeline {
     
     post {
         always {
-            sh '${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true'
-            cleanWs()
+            node('any') {
+                sh '${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true'
+                cleanWs()
+            }
         }
         success {
             echo 'Pipeline successfully executed!'
