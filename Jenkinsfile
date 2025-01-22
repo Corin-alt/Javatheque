@@ -18,7 +18,6 @@ pipeline {
         CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
         DB_HOST = 'localhost'
         DB_PORT = '27017'
-        DB_URL = credentials('db_url')
         DB_USER = credentials('db_user')
         DB_PASSWORD = credentials('db_password')
         DB_NAME = credentials('db_name')
