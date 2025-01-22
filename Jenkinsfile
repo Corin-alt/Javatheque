@@ -25,7 +25,11 @@ pipeline {
                     sh '''
                         set -e
                         apt-get update
-                        apt-get install -y wget unzip
+                        apt-get install -y wget unzip rsync
+                        
+                        # Vérifier l'espace disque disponible
+                        echo "Checking disk space..."
+                        df -h
                         
                         # Install Java 17
                         echo "Installing Java 17..."
@@ -50,13 +54,27 @@ pipeline {
                         echo "Unzipping GlassFish..."
                         unzip -o glassfish-7.0.0.zip -d /opt/
 
-                        # Copy GlassFish to workspace for stashing
+                        # Copy GlassFish to workspace for stashing using rsync
                         echo "Copying GlassFish to workspace..."
-                        cp -r /opt/glassfish7 ${WORKSPACE}/
+                        mkdir -p ${WORKSPACE}/glassfish7
+                        rsync -av --exclude='*.log' --exclude='*.jar.lock' /opt/glassfish7/ ${WORKSPACE}/glassfish7/
+                        
+                        # Vérifier que la copie s'est bien passée
+                        echo "Verifying GlassFish copy..."
+                        ls -la ${WORKSPACE}/glassfish7/
+                        du -sh ${WORKSPACE}/glassfish7/
+                        
+                        # S'assurer que les permissions sont correctes
+                        chmod -R 644 ${WORKSPACE}/glassfish7/
+                        find ${WORKSPACE}/glassfish7/ -type d -exec chmod 755 {} \;
                     '''
                     
-                    // Stash GlassFish from workspace
-                    stash includes: 'glassfish7/**', name: 'glassfish'
+                    // Stash GlassFish from workspace with allowEmpty
+                    stash includes: 'glassfish7/**', name: 'glassfish', allowEmpty: false
+                    
+                    // Vérifier que le stash a bien été créé
+                    echo "Verifying stash contents..."
+                    sh 'find ${WORKSPACE}/glassfish7 -type f | wc -l'
                 }
             }
         }
