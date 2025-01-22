@@ -26,9 +26,9 @@ pipeline {
         
         GLASSFISH_HOME = '/opt/glassfish7'
         CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
-        //DB_URL = credentials('db_url')
-        //DB_USER = credentials('db_user')
-        //DB_PASSWORD = credentials('db_password')
+        DB_URL = credentials('db_url')
+        DB_USER = credentials('db_user')
+        DB_PASSWORD = credentials('db_password')
     }
     
     tools {
