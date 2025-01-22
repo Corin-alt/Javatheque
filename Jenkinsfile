@@ -49,16 +49,10 @@ pipeline {
                         
                         echo "Unzipping GlassFish..."
                         unzip -o glassfish-7.0.0.zip -d /opt/
-                        
-                        echo "Setting permissions..."
-                        chmod -R 755 ${GLASSFISH_HOME}
-                        chmod -R +x ${GLASSFISH_HOME}/bin
-                        
-                        echo "Testing GlassFish..."
-                        ${GLASSFISH_HOME}/bin/asadmin version
                     '''
                     
-                    stash includes: 'opt/glassfish7/**', name: 'glassfish'
+                    // Stash GlassFish for the next stage
+                    stash includes: '**/glassfish7/**', name: 'glassfish'
                 }
             }
         }
@@ -72,7 +66,17 @@ pipeline {
             }
             steps {
                 script {
+                    // Récupérer GlassFish du stage précédent
                     unstash 'glassfish'
+                    
+                    // S'assurer que GlassFish a les bonnes permissions
+                    sh '''
+                        chmod -R 755 ${GLASSFISH_HOME}
+                        chmod -R +x ${GLASSFISH_HOME}/bin
+                        
+                        echo "Testing GlassFish..."
+                        ${GLASSFISH_HOME}/bin/asadmin version
+                    '''
                     
                     checkout([$class: 'GitSCM', 
                             branches: [[name: '*/main']], 
@@ -109,6 +113,7 @@ pipeline {
                         """
                     }
                     
+                    // Build avec Maven
                     sh 'mvn clean package -DskipTests'
                 }
             }
@@ -117,13 +122,19 @@ pipeline {
     
     post {
         always {
-            cleanWs()
+            node('built-in') {
+                cleanWs()
+            }
         }
         failure {
-            echo 'Pipeline failed!'
+            node('built-in') {
+                echo 'Pipeline failed!'
+            }
         }
         success {
-            echo 'Pipeline completed successfully!'
+            node('built-in') {
+                echo 'Pipeline completed successfully!'
+            }
         }
     }
 }
