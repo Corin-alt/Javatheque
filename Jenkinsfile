@@ -103,96 +103,22 @@ pipeline {
             }
             steps {
                 script {
-                    sh '''
-                        # Nettoyage préalable
-                        rm -rf glassfish7 ${GLASSFISH_HOME}
-                        
-                        # Création du répertoire de destination
-                        echo "Creating destination directory..."
-                        mkdir -p ${GLASSFISH_HOME}
-                        
-                        # Vérifier l'espace disque
-                        df -h
-                    '''
-                    
+                    // Configuration GlassFish...
                     unstash 'glassfish'
                     
                     sh '''
-                        echo "Checking unstashed content..."
-                        ls -la
-                        
-                        echo "Moving GlassFish to /opt..."
-                        if [ -d "glassfish7" ]; then
-                            mkdir -p ${GLASSFISH_HOME}
-                            
-                            echo "Moving files..."
-                            cp -r glassfish7/. ${GLASSFISH_HOME}/
-                            
-                            echo "Setting permissions..."
-                            chmod -R 755 ${GLASSFISH_HOME}
-                            chmod -R +x ${GLASSFISH_HOME}/bin
-                            ls -la ${GLASSFISH_HOME}/bin/
-                        
-                            echo "Testing GlassFish..."
-                            if [ -f "${GLASSFISH_HOME}/bin/asadmin" ]; then
-                                ${GLASSFISH_HOME}/bin/asadmin version
-                            else
-                                echo "ERROR: asadmin not found in ${GLASSFISH_HOME}/bin/"
-                                ls -la ${GLASSFISH_HOME}/bin/
-                                exit 1
-                            fi
-                        else
-                            echo "ERROR: glassfish7 directory not found after unstash"
-                            ls -la
-                            exit 1
-                        fi
+                        mkdir -p ${GLASSFISH_HOME}
+                        cp -r glassfish7/. ${GLASSFISH_HOME}/
+                        chmod -R 755 ${GLASSFISH_HOME}
+                        chmod -R +x ${GLASSFISH_HOME}/bin
                     '''
                     
-                    checkout([$class: 'GitSCM', 
-                            branches: [[name: '*/main']], 
-                            extensions: [[$class: 'CloneOption', depth: 1, noTags: true]]])
-
-                    def dbUrl = 'mongodb://' + env.DB_USER + ':' + env.DB_PASSWORD + '@' + env.DB_HOST + ':' + env.DB_PORT + '/' + env.DB_NAME
-                    
-                    sh """#!/bin/bash -e
-                        ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
-                    
-                        timeout 60 bash -c 'until ${GLASSFISH_HOME}/bin/asadmin list-domains | grep "domain1 running"; do sleep 2; done'
-
-                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
-                            --restype=java.lang.String \\
-                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
-                            --property value='\${dbUrl}' \\
-                            mongodb/url || true
-                        
-                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
-                            --restype=java.lang.String \\
-                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
-                            --property value='\${DB_USER}' \\
-                            mongodb/user || true
-                            
-                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
-                            --restype=java.lang.String \\
-                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
-                            --property value='\${DB_PASSWORD}' \\
-                            mongodb/password || true
-                    """
-                    
-                    // Build et vérification du WAR
+                    // Build et création du WAR
                     sh '''
                         mvn clean package -DskipTests
                         
                         echo "Vérification du WAR..."
                         WAR_FILE="target/javatheque.war"
-                        MAX_ATTEMPTS=30
-                        ATTEMPT=1
-                        
-                        while [ ! -f "$WAR_FILE" ] && [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-                            echo "Attente de la création du WAR (tentative $ATTEMPT/$MAX_ATTEMPTS)..."
-                            sleep 2
-                            ATTEMPT=$((ATTEMPT + 1))
-                        done
-                        
                         if [ ! -f "$WAR_FILE" ]; then
                             echo "ERROR: Le fichier WAR n'a pas été créé"
                             exit 1
@@ -206,13 +132,18 @@ pipeline {
                         fi
                         
                         echo "WAR créé avec succès (taille: $WAR_SIZE bytes)"
+                        
+                        # S'assurer que le fichier est accessible
+                        chmod 644 "$WAR_FILE"
                     '''
-
+                    
+                    // Stash le WAR pour une utilisation ultérieure
+                    stash includes: 'target/*.war', name: 'war-file', allowEmpty: false
+                    
+                    // Archiver aussi pour la traçabilité
                     archiveArtifacts artifacts: 'target/*.war', 
                                 fingerprint: true,
                                 onlyIfSuccessful: true
-                    
-                    sh 'sleep 5'
                 }
             }
         }
@@ -226,11 +157,16 @@ pipeline {
             }
             steps {
                 script {
+                    // Création des répertoires avec permissions
                     sh '''
                         mkdir -p ${WORKSPACE}/target
                         chmod -R 755 ${WORKSPACE}/target
                     '''
                     
+                    // Récupérer le WAR via unstash au lieu de copyArtifacts
+                    unstash 'war-file'
+                    
+                    // Configuration GlassFish
                     unstash 'glassfish'
                     
                     sh '''
@@ -238,23 +174,12 @@ pipeline {
                         cp -r glassfish7/. ${GLASSFISH_HOME}/
                         chmod -R 755 ${GLASSFISH_HOME}
                         chmod -R +x ${GLASSFISH_HOME}/bin
-                    '''
-                    
-                    copyArtifacts(
-                        projectName: env.JOB_NAME,
-                        filter: 'target/*.war',
-                        selector: specific(env.BUILD_NUMBER),
-                        fingerprintArtifacts: true,
-                        optional: false,
-                        flatten: true,
-                        target: "${WORKSPACE}/target"
-                    )
-                    
-                    sh '''
+                        
+                        # Vérification du WAR
                         echo "Vérification du WAR..."
                         WAR_PATH=$(find ${WORKSPACE}/target -name "*.war")
                         if [ -z "$WAR_PATH" ]; then
-                            echo "ERROR: WAR non trouvé après copie"
+                            echo "ERROR: WAR non trouvé après unstash"
                             exit 1
                         fi
                         
@@ -267,6 +192,16 @@ pipeline {
                         fi
                         
                         ls -l $WAR_PATH
+                        
+                        echo "Démarrage du domaine GlassFish..."
+                        ${GLASSFISH_HOME}/bin/asadmin start-domain domain1 || true
+                        
+                        echo "Tentative de déploiement..."
+                        ${GLASSFISH_HOME}/bin/asadmin deploy --force=true $WAR_PATH || {
+                            echo "Échec du déploiement, affichage des logs..."
+                            cat ${GLASSFISH_HOME}/domains/domain1/logs/server.log
+                            exit 1
+                        }
                     '''
                 }
             }
