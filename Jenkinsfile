@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'ubuntu:latest'
-            args '-u root'
-        }
-    }
+    agent none
         
     environment {
         APP_NAME = 'javatheque'
@@ -18,18 +13,23 @@ pipeline {
     }
         
     stages {
-        stage('Build & Test') {
+        stage('Setup Tests Environment') {
+            agent {
+                docker {
+                    image 'selenium/standalone-chrome'
+                    args '-u root'
+                }
+            }
             steps {
                 script {
                     sh '''
                         set -e
                         apt-get update
-                        apt-get install -y wget gnupg curl unzip
+                        apt-get install -y wget unzip
                         
                         # Install Java 17
                         echo "Installing Java 17..."
-                        apt-get install -y wget
-                        apt-get update && apt-get install -y apt-transport-https ca-certificates
+                        apt-get install -y apt-transport-https ca-certificates wget
                         mkdir -p /etc/apt/keyrings
                         wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | tee /etc/apt/keyrings/adoptium.asc
                         echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list
@@ -39,103 +39,41 @@ pipeline {
                         echo "Verifying Java installation..."
                         java -version
                         
-                        # Chrome and ChromeDriver installation with dependencies
-                        echo "Installing Chrome dependencies..."
-                        apt-get install -y \
-                            libasound2t64 \
-                            libatk1.0-0 \
-                            libatk-bridge2.0-0 \
-                            libcairo2 \
-                            libcups2 \
-                            libdbus-1-3 \
-                            libexpat1 \
-                            libfontconfig1 \
-                            libgbm1 \
-                            libgcc1 \
-                            libglib2.0-0 \
-                            libgtk-3-0 \
-                            libnspr4 \
-                            libnss3 \
-                            libpango-1.0-0 \
-                            libpangocairo-1.0-0 \
-                            libstdc++6 \
-                            libx11-6 \
-                            libx11-xcb1 \
-                            libxcb1 \
-                            libxcomposite1 \
-                            libxcursor1 \
-                            libxdamage1 \
-                            libxext6 \
-                            libxfixes3 \
-                            libxi6 \
-                            libxrandr2 \
-                            libxrender1 \
-                            libxss1 \
-                            libxtst6 \
-                            xdg-utils
-
-                        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-                        apt-get install -y ./google-chrome-stable_current_amd64.deb
-                        
-                        LATEST_DRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE")
-                        wget -N "https://chromedriver.storage.googleapis.com/$LATEST_DRIVER_VERSION/chromedriver_linux64.zip"
-                        unzip chromedriver_linux64.zip
-                        mv chromedriver /usr/local/bin/
-                        chmod +x /usr/local/bin/chromedriver
-                        
-                        # GlassFish installation with verbose output and additional checks
+                        # GlassFish installation
                         echo "Starting GlassFish installation..."
-                        
-                        echo "Downloading GlassFish..."
                         wget -v https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
                         
-                        echo "Cleaning any existing GlassFish installation..."
+                        echo "Creating GlassFish directories..."
                         rm -rf /opt/glassfish7
-                        
-                        echo "Creating GlassFish directory..."
                         mkdir -p /opt/glassfish7
                         
-                        echo "Unzipping GlassFish with full permissions..."
+                        echo "Unzipping GlassFish..."
                         unzip -o glassfish-7.0.0.zip -d /opt/
                         
-                        echo "Setting correct ownership and permissions..."
-                        chown -R root:root ${GLASSFISH_HOME}
+                        echo "Setting permissions..."
                         chmod -R 755 ${GLASSFISH_HOME}
                         chmod -R +x ${GLASSFISH_HOME}/bin
                         
-                        echo "Verifying installation structure..."
-                        if [ ! -f "${GLASSFISH_HOME}/bin/asadmin" ]; then
-                            echo "asadmin not found in expected location"
-                            find /opt -name asadmin
-                            exit 1
-                        fi
-                        
-                        echo "Verifying GlassFish bin contents:"
-                        ls -la ${GLASSFISH_HOME}/bin
-                        
-                        echo "Verifying executable permissions:"
-                        ls -la ${GLASSFISH_HOME}/bin/asadmin
-                        
-                        echo "Checking Java environment for GlassFish:"
-                        echo "JAVA_HOME=$JAVA_HOME"
-                        echo "PATH=$PATH"
-                        
-                        echo "Testing GlassFish asadmin:"
-                        ${GLASSFISH_HOME}/bin/asadmin version || {
-                            echo "Failed to get GlassFish version"
-                            echo "Checking if asadmin is executable:"
-                            file ${GLASSFISH_HOME}/bin/asadmin
-                            echo "Checking asadmin contents:"
-                            head -n 5 ${GLASSFISH_HOME}/bin/asadmin
-                            exit 1
-                        }
+                        echo "Testing GlassFish..."
+                        ${GLASSFISH_HOME}/bin/asadmin version
                     '''
+                    
+                    stash includes: 'opt/glassfish7/**', name: 'glassfish'
                 }
             }
         }
-        stage('Checkout & Build application') {
+
+        stage('Build & Deploy') {
+            agent {
+                docker {
+                    image 'maven:3.9-eclipse-temurin-17'
+                    args '-u root'
+                }
+            }
             steps {
                 script {
+                    unstash 'glassfish'
+                    
                     checkout([$class: 'GitSCM', 
                             branches: [[name: '*/main']], 
                             extensions: [[$class: 'CloneOption', depth: 1, noTags: true]]])
@@ -171,12 +109,21 @@ pipeline {
                         """
                     }
                     
-                    def buildResult = sh(script: 'mvn clean package -DskipTests', returnStatus: true)
-                    if (buildResult != 0) {
-                        error "Maven build failed with status ${buildResult}"
-                    }
+                    sh 'mvn clean package -DskipTests'
                 }
             }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
         }
     }
 }
