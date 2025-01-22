@@ -64,6 +64,12 @@ pipeline {
             }
         }
         stage('Checkout & Build application') {
+            agent {
+                docker {
+                    image 'ubuntu:latest'
+                    args '-u root'
+                }
+            }
             steps {
                 script {
                     checkout([$class: 'GitSCM', 
