@@ -186,39 +186,54 @@ pipeline {
             }
         }
 
-        stage('Deploy WAR') {
-            agent {
-                docker {
-                    image 'maven:3.9-eclipse-temurin-17'
-                    args '-u root'
-                }
+    stage('Check retrieving WAR file') {
+        agent {
+            docker {
+                image 'maven:3.9-eclipse-temurin-17'
+                args '-u root'
             }
-            steps {
-                script {
-                    unstash 'glassfish'
-                    
-                    sh '''
-                        # Configurer GlassFish
-                        mkdir -p ${GLASSFISH_HOME}
-                        cp -r glassfish7/. ${GLASSFISH_HOME}/
-                        chmod -R 755 ${GLASSFISH_HOME}
-                        chmod -R +x ${GLASSFISH_HOME}/bin
-                    '''
+        }
+        steps {
+            script {
+                sh '''
+                    mkdir -p ${WORKSPACE}/target
+                    chmod -R 755 ${WORKSPACE}/target
+                '''
                 
+                unstash 'glassfish'
+                
+                sh '''
+                    # Configure GlassFish
+                    mkdir -p ${GLASSFISH_HOME}
+                    cp -r glassfish7/. ${GLASSFISH_HOME}/
+                    chmod -R 755 ${GLASSFISH_HOME}
+                    chmod -R +x ${GLASSFISH_HOME}/bin
+                '''
+                
+                retry(3) {
                     copyArtifacts(
                         projectName: env.JOB_NAME,
                         filter: 'target/*.war',
                         selector: specific(env.BUILD_NUMBER),
-                        fingerprintArtifacts: true
+                        fingerprintArtifacts: true,
+                        optional: false,
+                        flatten: true,
+                        target: "${WORKSPACE}/target"
                     )
-                    
-                    sh """
-                        echo "Checking WAR file..."
-                        ls -l target/*.war
-                    """
                 }
+                
+                sh """
+                    echo "Checking WAR file..."
+                    if [ ! -f "${WORKSPACE}/target/*.war" ]; then
+                        echo "ERROR: WAR file not found after copy"
+                        exit 1
+                    fi
+                    
+                    ls -l ${WORKSPACE}/target/*.war
+                """
             }
         }
+    }
     }
     
     post {
