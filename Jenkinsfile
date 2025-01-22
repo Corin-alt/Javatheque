@@ -39,6 +39,7 @@ pipeline {
     stages {
         stage('Setup Environment') {
             steps {
+                echo "test"
                 script {
                     sh '''
                         apt-get update
