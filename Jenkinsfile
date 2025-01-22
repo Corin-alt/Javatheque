@@ -49,10 +49,14 @@ pipeline {
                         
                         echo "Unzipping GlassFish..."
                         unzip -o glassfish-7.0.0.zip -d /opt/
+
+                        # Copy GlassFish to workspace for stashing
+                        echo "Copying GlassFish to workspace..."
+                        cp -r /opt/glassfish7 ${WORKSPACE}/
                     '''
                     
-                    // Stash GlassFish for the next stage
-                    stash includes: '**/glassfish7/**', name: 'glassfish'
+                    // Stash GlassFish from workspace
+                    stash includes: 'glassfish7/**', name: 'glassfish'
                 }
             }
         }
@@ -69,8 +73,9 @@ pipeline {
                     // Récupérer GlassFish du stage précédent
                     unstash 'glassfish'
                     
-                    // S'assurer que GlassFish a les bonnes permissions
+                    // Copier GlassFish vers /opt
                     sh '''
+                        cp -r glassfish7 /opt/
                         chmod -R 755 ${GLASSFISH_HOME}
                         chmod -R +x ${GLASSFISH_HOME}/bin
                         
