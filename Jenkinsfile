@@ -1,87 +1,80 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.8.4-openjdk-17-slim'
-            args '-u root --privileged'
-        }
-    }
+    agent any
 
-    triggers {
-        githubPush()
+    options {
+        buildDiscarder logRotator(
+            artifactDaysToKeepStr: '', 
+            artifactNumToKeepStr: '', 
+            daysToKeepStr: '', 
+            numToKeepStr: '2'
+        )
     }
 
     environment {
+        APP_NAME = 'javatheque'
+        DOCKER_IMAGE = 'javatheque-env'
+        DOCKER_TAG = 'latest'
+        DOCKER_REGISTRY = 'ghcr.io'
+        GITHUB_OWNER = 'corin-alt'
+
+        DEPLOY_SERVER = credentials('deploy-server') 
+        APP_CODE_PATH = '/apps/java/src'
+        APP_DEPLOY_PATH = '/apps/java/deploy'
+        
+        DOCKERFILE_CHANGED = 'false'
+        
         GLASSFISH_HOME = '/opt/glassfish7'
-        PATH = "${env.GLASSFISH_HOME}/bin:${env.PATH}"
+        CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
+        //DB_URL = credentials('db_url')
+        //DB_USER = credentials('db_user')
+        //DB_PASSWORD = credentials('db_password')
     }
-
+    
+    tools {
+        maven 'Maven'
+        dockerTool 'Docker'
+        jdk 'JDK17'
+    }
+    
     stages {
-        stage('Checkout') {
+        stage('Setup Environment') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Préparation de l\'environnement') {
-            steps {
-                sh '''
-                    apt-get clean
-                    rm -rf /var/lib/apt/lists/*
-                    apt-get update -o Acquire::ForceHash=yes
-                    
-                    apt-get install -y \
-                        wget \
-                        unzip \
-                        gnupg
-
-                    wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
-                    unzip glassfish-7.0.0.zip -d /opt/
-                    chmod -R +x ${GLASSFISH_HOME}/bin
-                '''
-            }
-        }
-
-        stage('Installation des dépendances') {
-            steps {
-                sh '''
-                    apt-get install -y \
-                        chromium \
-                        chromium-driver
-                '''
-            }
-        }
-
-        stage('Build et Tests') {
-            steps {
-                sh 'mvn clean verify'
-            }
-        }
-
-        stage('Démarrage de GlassFish') {
-            steps {
-                sh '''
-                    ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
-                    sleep 10
-                    ${GLASSFISH_HOME}/bin/asadmin version
-                '''
+                script {
+                    sh '''
+                        apt-get update
+                        apt-get install -y wget gnupg
+                        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+                        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
+                        apt-get update
+                        apt-get install -y google-chrome-stable
+                        
+                        CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1)
+                        wget -N "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}"
+                        wget -N "https://chromedriver.storage.googleapis.com/$(cat LATEST_RELEASE_${CHROME_VERSION})/chromedriver_linux64.zip"
+                        unzip chromedriver_linux64.zip
+                        mv chromedriver /usr/local/bin/
+                        chmod +x /usr/local/bin/chromedriver
+                        
+                        # Installation de GlassFish 7
+                        wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
+                        unzip glassfish-7.0.0.zip -d /opt/
+                        chmod -R +x ${GLASSFISH_HOME}/bin
+                    '''
+                }
             }
         }
     }
-
+    
     post {
         always {
-            sh '''
-                if ${GLASSFISH_HOME}/bin/asadmin list-domains | grep -q running; then
-                    ${GLASSFISH_HOME}/bin/asadmin stop-domain domain1
-                fi
-            '''
+            sh '${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true'
             cleanWs()
         }
         success {
-            echo 'Pipeline réussi !'
+            echo 'Pipeline successfully executed!'
         }
         failure {
-            echo 'Pipeline échoué !'
+            echo 'Pipeline failed!'
         }
     }
 }
