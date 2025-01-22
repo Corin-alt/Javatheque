@@ -88,17 +88,46 @@ pipeline {
             }
             steps {
                 script {
+                    sh '''
+                        # Nettoyage préalable
+                        rm -rf glassfish7 ${GLASSFISH_HOME}
+                        mkdir -p ${GLASSFISH_HOME}
+                        
+                        # Vérifier l'espace disque
+                        df -h
+                    '''
+                    
                     // Récupérer GlassFish du stage précédent
                     unstash 'glassfish'
                     
-                    // Copier GlassFish vers /opt
+                    // Vérifier le contenu unstashed
                     sh '''
-                        cp -r glassfish7 /opt/
-                        chmod -R 755 ${GLASSFISH_HOME}
-                        chmod -R +x ${GLASSFISH_HOME}/bin
+                        echo "Checking unstashed content..."
+                        ls -la
                         
-                        echo "Testing GlassFish..."
-                        ${GLASSFISH_HOME}/bin/asadmin version
+                        echo "Moving GlassFish to /opt..."
+                        if [ -d "glassfish7" ]; then
+                            rm -rf ${GLASSFISH_HOME}
+                            mv glassfish7/* ${GLASSFISH_HOME}/
+                            
+                            echo "Setting permissions..."
+                            chmod -R 755 ${GLASSFISH_HOME}
+                            chmod -R +x ${GLASSFISH_HOME}/bin
+                            ls -la ${GLASSFISH_HOME}/bin/
+                        
+                            echo "Testing GlassFish..."
+                            if [ -f "${GLASSFISH_HOME}/bin/asadmin" ]; then
+                                ${GLASSFISH_HOME}/bin/asadmin version
+                            else
+                                echo "ERROR: asadmin not found in ${GLASSFISH_HOME}/bin/"
+                                ls -la ${GLASSFISH_HOME}/bin/
+                                exit 1
+                            fi
+                        else
+                            echo "ERROR: glassfish7 directory not found after unstash"
+                            ls -la
+                            exit 1
+                        fi
                     '''
                     
                     checkout([$class: 'GitSCM', 
