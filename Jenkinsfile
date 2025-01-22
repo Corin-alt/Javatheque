@@ -50,39 +50,24 @@ pipeline {
                     node {
                         echo "Setting up Environment..."
                         sh '''
-                            if [ "$(id -u)" = 0 ]; then
-                                apt-get update && apt-get install -y wget gnupg unzip
-                            else
-                                sudo apt-get update && sudo apt-get install -y wget gnupg unzip
-                            fi
-                            
-                            wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-                            echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google.list
-                            sudo apt-get update
-                            sudo apt-get install -y google-chrome-stable
+                            apt-get update
+                            apt-get install -y wget gnupg
+                            wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+                            echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
+                            apt-get update
+                            apt-get install -y google-chrome-stable
                             
                             CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1)
-                            CHROMEDRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
-                            wget -N "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+                            wget -N "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}"
+                            wget -N "https://chromedriver.storage.googleapis.com/$(cat LATEST_RELEASE_${CHROME_VERSION})/chromedriver_linux64.zip"
                             unzip chromedriver_linux64.zip
-                            sudo mv chromedriver /usr/local/bin/
-                            sudo chmod +x /usr/local/bin/chromedriver
-                        '''
-                    }
-                }
-            }
-        }
-        
-        stage('Install GlassFish') {
-            steps {
-                script {
-                    node {
-                        sh '''
-                            if [ ! -d "${GLASSFISH_HOME}" ]; then
-                                wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
-                                unzip glassfish-7.0.0.zip -d /opt/
-                                sudo chmod -R +x ${GLASSFISH_HOME}/bin
-                            fi
+                            mv chromedriver /usr/local/bin/
+                            chmod +x /usr/local/bin/chromedriver
+                            
+                            # Installation de GlassFish 7
+                            wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
+                            unzip glassfish-7.0.0.zip -d /opt/
+                            chmod -R +x ${GLASSFISH_HOME}/bin
                         '''
                     }
                 }
