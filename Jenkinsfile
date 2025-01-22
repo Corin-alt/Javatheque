@@ -5,6 +5,10 @@ pipeline {
             args '-u root'
         }
     }
+
+    triggers {
+        githubPush()
+    }
     
     options {
         buildDiscarder logRotator(
