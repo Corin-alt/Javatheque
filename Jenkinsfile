@@ -1,6 +1,10 @@
 pipeline {
     agent none
-        
+    
+    options {
+        copyArtifactPermission('*')
+    }
+
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -111,10 +115,8 @@ pipeline {
                         df -h
                     '''
                     
-                    // Récupérer GlassFish du stage précédent
                     unstash 'glassfish'
                     
-                    // Vérifier le contenu unstashed
                     sh '''
                         echo "Checking unstashed content..."
                         ls -la
@@ -176,9 +178,44 @@ pipeline {
                             --property value='\${DB_PASSWORD}' \\
                             mongodb/password || true
                     """
-                    
-                    // Build avec Maven
+                
                     sh 'mvn clean package -DskipTests'
+
+                    archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+                }
+            }
+        }
+
+        stage('Deploy WAR') {
+            agent {
+                docker {
+                    image 'maven:3.9-eclipse-temurin-17'
+                    args '-u root'
+                }
+            }
+            steps {
+                script {
+                    unstash 'glassfish'
+                    
+                    sh '''
+                        # Configurer GlassFish
+                        mkdir -p ${GLASSFISH_HOME}
+                        cp -r glassfish7/. ${GLASSFISH_HOME}/
+                        chmod -R 755 ${GLASSFISH_HOME}
+                        chmod -R +x ${GLASSFISH_HOME}/bin
+                    '''
+                
+                    copyArtifacts(
+                        projectName: env.JOB_NAME,
+                        filter: 'target/*.war',
+                        selector: specific(env.BUILD_NUMBER),
+                        fingerprintArtifacts: true
+                    )
+                    
+                    sh """
+                        echo "Checking WAR file..."
+                        ls -l target/*.war
+                    """
                 }
             }
         }
@@ -187,6 +224,14 @@ pipeline {
     post {
         always {
             node('built-in') {
+                script {
+                    sh '''
+                        if [ -f "${GLASSFISH_HOME}/bin/asadmin" ]; then
+                            echo "Stopping GlassFish domain..."
+                            ${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true
+                        fi
+                    '''
+                }
                 cleanWs()
             }
         }
