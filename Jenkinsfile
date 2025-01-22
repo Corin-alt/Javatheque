@@ -31,8 +31,8 @@ pipeline {
     }
     
     tools {
-        maven 'maven'
-        docker 'docker'
+        maven 'Maven'
+        docker 'Docker'
         jdk 'JDK17'
     }
     
