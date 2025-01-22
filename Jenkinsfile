@@ -10,15 +10,6 @@ pipeline {
         githubPush()
     }
     
-    options {
-        buildDiscarder logRotator(
-            artifactDaysToKeepStr: '',
-            artifactNumToKeepStr: '',
-            daysToKeepStr: '',
-            numToKeepStr: '2'
-        )
-    }
-    
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
