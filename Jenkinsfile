@@ -1,35 +1,32 @@
 pipeline {
     agent none
-    
-    options {
-        timeout(time: 1, unit: 'HOURS')
-        disableConcurrentBuilds()
-    }
-    
+        
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
         DOCKER_TAG = 'latest'
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
-        
+
         // Credentials 
+        GITHUB_TOKEN = credentials('github-token')
         DEPLOY_SERVER = credentials('deploy-server')
         DB_USER = credentials('db_user')
         DB_NAME = credentials('db_name')
         DB_PASSWORD = credentials('db_password')
-        DB_URL = "mongodb://${DB_USER}:${DB_PASSWORD}@localhost:27017/${DB_NAME}"
- 
+        DB_HOST = 'localhost'
+        DB_PORT = '27017'
+
         // Paths
         APP_CODE_PATH = '/apps/java/src'
         APP_DEPLOY_PATH = '/apps/java/deploy'
         GLASSFISH_HOME = '/opt/glassfish7'
-        
+
         // Flags and Options
         DOCKERFILE_CHANGED = 'false'
         CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
     }
-    
+        
     stages {
         stage('Build & Test') {
             agent {
@@ -40,10 +37,6 @@ pipeline {
             }
             steps {
                 script {
-                    if (!env.DB_URL?.trim()) {
-                        error "DB_URL credential is missing"
-                    }
-                    
                     sh '''
                         set -e
                         apt-get update
@@ -67,6 +60,46 @@ pipeline {
                         unzip glassfish-7.0.0.zip -d /opt/
                         chmod -R +x ${GLASSFISH_HOME}/bin
                     '''
+                }
+            }
+        }
+        stage('Checkout & Build application') {
+            steps {
+                script {
+                    checkout([$class: 'GitSCM', 
+                            branches: [[name: '*/main']], 
+                            extensions: [[$class: 'CloneOption', depth: 1, noTags: true]]])
+
+                    def dbUrl = "mongodb://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}"
+                    
+                    sh """
+                        ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
+                    
+                        timeout 60 bash -c 'until ${GLASSFISH_HOME}/bin/asadmin list-domains | grep "domain1 running"; do sleep 2; done'
+
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
+                            --restype=java.lang.String \
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
+                            --property value=${dbUrl} \
+                            mongodb/url || exit 1
+                        
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
+                            --restype=java.lang.String \
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
+                            --property value=${env.DB_USER} \
+                            mongodb/user || exit 1
+                            
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
+                            --restype=java.lang.String \
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
+                            --property value=${env.DB_PASSWORD} \
+                            mongodb/password || exit 1
+                    """
+                    
+                    def buildResult = sh(script: 'mvn clean package -DskipTests', returnStatus: true)
+                    if (buildResult != 0) {
+                        error "Maven build failed with status ${buildResult}"
+                    }
                 }
             }
         }
