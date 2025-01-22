@@ -7,9 +7,21 @@ pipeline {
         DOCKER_TAG = 'latest'
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
+
+        DEPLOY_SERVER = credentials('deploy-server') 
+        APP_CODE_PATH = '/apps/java/src'
+        APP_DEPLOY_PATH = '/apps/java/deploy'
+        
+        DOCKERFILE_CHANGED = 'false'
+        
         GLASSFISH_HOME = '/opt/glassfish7'
+        CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
         DB_HOST = 'localhost'
         DB_PORT = '27017'
+        DB_URL = credentials('db_url')
+        DB_USER = credentials('db_user')
+        DB_PASSWORD = credentials('db_password')
+        DB_NAME = credentials('db_name')
     }
         
     stages {
@@ -140,36 +152,31 @@ pipeline {
                             branches: [[name: '*/main']], 
                             extensions: [[$class: 'CloneOption', depth: 1, noTags: true]]])
 
-                    withCredentials([
-                        usernamePassword(credentialsId: 'db_user', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
-                        string(credentialsId: 'db_name', variable: 'DB_NAME')
-                    ]) {
-                        def dbUrl = 'mongodb://' + DB_USER + ':' + DB_PASSWORD + '@' + env.DB_HOST + ':' + env.DB_PORT + '/' + DB_NAME
-                        
-                        sh """#!/bin/bash -e
-                            ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
-                        
-                            timeout 60 bash -c 'until ${GLASSFISH_HOME}/bin/asadmin list-domains | grep "domain1 running"; do sleep 2; done'
+                    def dbUrl = 'mongodb://' + env.DB_USER + ':' + env.DB_PASSWORD + '@' + env.DB_HOST + ':' + env.DB_PORT + '/' + env.DB_NAME
+                    
+                    sh """#!/bin/bash -e
+                        ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
+                    
+                        timeout 60 bash -c 'until ${GLASSFISH_HOME}/bin/asadmin list-domains | grep "domain1 running"; do sleep 2; done'
 
-                            ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
-                                --restype=java.lang.String \\
-                                --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
-                                --property value='\${dbUrl}' \\
-                                mongodb/url || true
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                            --restype=java.lang.String \\
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                            --property value='\${dbUrl}' \\
+                            mongodb/url || true
+                        
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                            --restype=java.lang.String \\
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                            --property value='\${DB_USER}' \\
+                            mongodb/user || true
                             
-                            ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
-                                --restype=java.lang.String \\
-                                --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
-                                --property value='\${DB_USER}' \\
-                                mongodb/user || true
-                                
-                            ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
-                                --restype=java.lang.String \\
-                                --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
-                                --property value='\${DB_PASSWORD}' \\
-                                mongodb/password || true
-                        """
-                    }
+                        ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \\
+                            --restype=java.lang.String \\
+                            --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \\
+                            --property value='\${DB_PASSWORD}' \\
+                            mongodb/password || true
+                    """
                     
                     // Build avec Maven
                     sh 'mvn clean package -DskipTests'
