@@ -37,7 +37,7 @@ pipeline {
     }
     
     stages {
-        stage('Setup Environment') {
+        stage('Setup Environment.') {
             steps {
                 script {
                     sh '''
