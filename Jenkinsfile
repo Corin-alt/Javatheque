@@ -123,7 +123,6 @@ pipeline {
                         
                         echo "Moving GlassFish to /opt..."
                         if [ -d "glassfish7" ]; then
-                            # S'assurer que le répertoire existe
                             mkdir -p ${GLASSFISH_HOME}
                             
                             echo "Moving files..."
@@ -178,39 +177,69 @@ pipeline {
                             --property value='\${DB_PASSWORD}' \\
                             mongodb/password || true
                     """
-                
-                    sh 'mvn clean package -DskipTests'
+                    
+                    // Build et vérification du WAR
+                    sh '''
+                        mvn clean package -DskipTests
+                        
+                        echo "Vérification du WAR..."
+                        WAR_FILE="target/javatheque.war"
+                        MAX_ATTEMPTS=30
+                        ATTEMPT=1
+                        
+                        while [ ! -f "$WAR_FILE" ] && [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+                            echo "Attente de la création du WAR (tentative $ATTEMPT/$MAX_ATTEMPTS)..."
+                            sleep 2
+                            ATTEMPT=$((ATTEMPT + 1))
+                        done
+                        
+                        if [ ! -f "$WAR_FILE" ]; then
+                            echo "ERROR: Le fichier WAR n'a pas été créé"
+                            exit 1
+                        fi
+                        
+                        # Vérifier la taille du fichier
+                        WAR_SIZE=$(stat -f%z "$WAR_FILE" 2>/dev/null || stat -c%s "$WAR_FILE")
+                        if [ "$WAR_SIZE" -eq 0 ]; then
+                            echo "ERROR: Le fichier WAR est vide"
+                            exit 1
+                        fi
+                        
+                        echo "WAR créé avec succès (taille: $WAR_SIZE bytes)"
+                    '''
 
-                    archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+                    archiveArtifacts artifacts: 'target/*.war', 
+                                fingerprint: true,
+                                onlyIfSuccessful: true
+                    
+                    sh 'sleep 5'
                 }
             }
         }
 
-    stage('Check retrieving WAR file') {
-        agent {
-            docker {
-                image 'maven:3.9-eclipse-temurin-17'
-                args '-u root'
+        stage('Check retrieving WAR file') {
+            agent {
+                docker {
+                    image 'maven:3.9-eclipse-temurin-17'
+                    args '-u root'
+                }
             }
-        }
-        steps {
-            script {
-                sh '''
-                    mkdir -p ${WORKSPACE}/target
-                    chmod -R 755 ${WORKSPACE}/target
-                '''
-                
-                unstash 'glassfish'
-                
-                sh '''
-                    # Configure GlassFish
-                    mkdir -p ${GLASSFISH_HOME}
-                    cp -r glassfish7/. ${GLASSFISH_HOME}/
-                    chmod -R 755 ${GLASSFISH_HOME}
-                    chmod -R +x ${GLASSFISH_HOME}/bin
-                '''
-                
-                retry(3) {
+            steps {
+                script {
+                    sh '''
+                        mkdir -p ${WORKSPACE}/target
+                        chmod -R 755 ${WORKSPACE}/target
+                    '''
+                    
+                    unstash 'glassfish'
+                    
+                    sh '''
+                        mkdir -p ${GLASSFISH_HOME}
+                        cp -r glassfish7/. ${GLASSFISH_HOME}/
+                        chmod -R 755 ${GLASSFISH_HOME}
+                        chmod -R +x ${GLASSFISH_HOME}/bin
+                    '''
+                    
                     copyArtifacts(
                         projectName: env.JOB_NAME,
                         filter: 'target/*.war',
@@ -220,20 +249,28 @@ pipeline {
                         flatten: true,
                         target: "${WORKSPACE}/target"
                     )
-                }
-                
-                sh """
-                    echo "Checking WAR file..."
-                    if [ ! -f "${WORKSPACE}/target/*.war" ]; then
-                        echo "ERROR: WAR file not found after copy"
-                        exit 1
-                    fi
                     
-                    ls -l ${WORKSPACE}/target/*.war
-                """
+                    sh '''
+                        echo "Vérification du WAR..."
+                        WAR_PATH=$(find ${WORKSPACE}/target -name "*.war")
+                        if [ -z "$WAR_PATH" ]; then
+                            echo "ERROR: WAR non trouvé après copie"
+                            exit 1
+                        fi
+                        
+                        WAR_SIZE=$(stat -f%z "$WAR_PATH" 2>/dev/null || stat -c%s "$WAR_PATH")
+                        echo "WAR trouvé: $WAR_PATH (taille: $WAR_SIZE bytes)"
+                        
+                        if [ "$WAR_SIZE" -eq 0 ]; then
+                            echo "ERROR: Le fichier WAR est vide"
+                            exit 1
+                        fi
+                        
+                        ls -l $WAR_PATH
+                    '''
+                }
             }
         }
-    }
     }
     
     post {
