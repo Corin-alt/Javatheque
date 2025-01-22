@@ -42,7 +42,7 @@ pipeline {
                         # Chrome and ChromeDriver installation with dependencies
                         echo "Installing Chrome dependencies..."
                         apt-get install -y \
-                            libasound2 \
+                            libasound2t64 \
                             libatk1.0-0 \
                             libatk-bridge2.0-0 \
                             libcairo2 \
@@ -73,7 +73,7 @@ pipeline {
                             libxss1 \
                             libxtst6 \
                             xdg-utils
-                        
+
                         wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
                         apt-get install -y ./google-chrome-stable_current_amd64.deb
                         
@@ -144,7 +144,6 @@ pipeline {
                         usernamePassword(credentialsId: 'db_user', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASSWORD'),
                         string(credentialsId: 'db_name', variable: 'DB_NAME')
                     ]) {
-                        // Construct MongoDB URL using single quotes to prevent interpolation
                         def dbUrl = 'mongodb://' + DB_USER + ':' + DB_PASSWORD + '@' + env.DB_HOST + ':' + env.DB_PORT + '/' + DB_NAME
                         
                         sh """#!/bin/bash -e
@@ -180,36 +179,4 @@ pipeline {
             }
         }
     }
-    
-    /* Commented post section
-    post {
-        always {
-            node('built-in') {
-                script {
-                    try {
-                        sh '''
-                            if [ -f "${GLASSFISH_HOME}/bin/asadmin" ]; then
-                                ${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true
-                            fi
-                        '''
-                    } catch (Exception e) {
-                        echo "Warning: Failed to stop GlassFish domain: ${e.getMessage()}"
-                    } finally {
-                        cleanWs()
-                    }
-                }
-            }
-        }
-        success {
-            node('built-in') {
-                echo 'Pipeline successfully executed!'
-            }
-        }
-        failure {
-            node('built-in') {
-                echo 'Pipeline failed!'
-            }
-        }
-    }
-    */
 }
