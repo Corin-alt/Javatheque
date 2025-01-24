@@ -14,7 +14,8 @@ ENV PATH=$PATH:$GLASSFISH_HOME/bin
 
 # Install required tools
 RUN apt-get update && \
-    apt-get install -y wget unzip && \
+    apt-get install -y wget unzip python3 python3-pip && \
+    pip3 install locust && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Chrome and ChromeDriver
@@ -64,7 +65,7 @@ VOLUME ["$DEPLOY_DIR"]
 # 8080: HTTP
 # 4848: Admin Console
 # 8181: HTTPS
-EXPOSE 8080 4848 8181
+EXPOSE 8080 4848 8181 8089
 
 # Switch to glassfish user for security
 USER glassfish
