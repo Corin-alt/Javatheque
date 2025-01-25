@@ -86,7 +86,7 @@ pipeline {
             agent {
                 docker {
                     image 'ubuntu:latest'
-                    args '-u root --dns 8.8.8.8 --dns 8.8.4.4'
+                    args '-u root'
                 }
             }
             when {
@@ -107,7 +107,7 @@ pipeline {
                     TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
                     ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                     chmod 644 ~/.ssh/known_hosts
-                    ssh ${DEPLOY_PPROD_SERVER} "touch fromjenkins.txt"
+                    ssh -o StrictHostKeyChecking=no ${DEPLOY_PPROD_SERVER} "touch fromjenkins.txt"
                     '''
                 }
             }
