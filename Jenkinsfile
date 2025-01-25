@@ -35,6 +35,7 @@ pipeline {
             }
             steps {
                 sh 'mvn clean package -DskipTests'
+                sh 'echo UAUAUAAU: $DEPLOY_PPROD_SERVER'
             }
         }
 
