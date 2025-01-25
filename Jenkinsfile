@@ -21,6 +21,8 @@ pipeline {
         
         APP_CODE_PATH = '/apps/javatheque/sourcecode'
         APP_DEPLOY_PATH = '/apps/javatheque/deploy'
+
+        SUDO_PASSWORD = credentials('sudo-password')
     }
 
     stages {
@@ -105,22 +107,11 @@ pipeline {
                         ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                         chmod 644 ~/.ssh/known_hosts
 
-                        ssh ${DEPLOY_PPROD_SERVER} "
-                            if ! command -v docker &> /dev/null; then
-                                echo 'Docker not found'
-                                exit 1
-                            fi
-                            if ! docker info &> /dev/null; then
-                                echo 'Docker daemon not running'
-                                exit 1
-                            fi
-
-                            sudo mkdir -p \"$APP_CODE_PATH\"
-                            sudo mkdir -p \"$APP_DEPLOY_PATH\"
-                            sudo chmod 755 \"$APP_CODE_PATH\"
-                            sudo chmod 755 \"$APP_DEPLOY_PATH\"
-                            sudo chown $(whoami):$(whoami) \"$APP_CODE_PATH\"
-                            sudo chown $(whoami):$(whoami) \"$APP_DEPLOY_PATH\"
+                        ssh ${DEPLOY_PPROD_SERVER} "echo ${SUDO_PASSWORD} | sudo -S chown -R $(whoami):$(whoami) /apps && \
+                            mkdir -p \"$APP_CODE_PATH\" && \
+                            mkdir -p \"$APP_DEPLOY_PATH\" && \
+                            chmod 755 \"$APP_CODE_PATH\" && \
+                            chmod 755 \"$APP_DEPLOY_PATH\"
                         "
                         
                         rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
