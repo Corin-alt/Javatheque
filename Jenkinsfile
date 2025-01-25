@@ -35,7 +35,10 @@ pipeline {
             }
             steps {
                 sh 'mvn clean package -DskipTests'
-                sh 'echo UAUAUAAU: $DEPLOY_PPROD_SERVER'
+                sh '''
+                    IFS='@' read -r user ip <<< "$DEPLOY_PPROD_SERVER"
+                    echo "Testing connection to IP: $ip"
+                '''
             }
         }
 
