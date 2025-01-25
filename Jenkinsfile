@@ -105,31 +105,31 @@ pipeline {
                         ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                         chmod 644 ~/.ssh/known_hosts
 
-                        ssh ${DEPLOY_PPROD_SERVER} '
+                        ssh ${DEPLOY_PPROD_SERVER} "
                             if ! command -v docker &> /dev/null; then
-                                echo "Docker not found"
+                                echo 'Docker not found'
                                 exit 1
                             fi
                             if ! docker info &> /dev/null; then
-                                echo "Docker daemon not running"
+                                echo 'Docker daemon not running'
                                 exit 1
                             fi
 
-                            mkdir -p ${APP_CODE_PATH}
-                            mkdir -p ${APP_DEPLOY_PATH}
-                            chmod 755 ${APP_CODE_PATH}
-                            chmod 755 ${APP_DEPLOY_PATH}
-                        '
+                            mkdir -p \"$APP_CODE_PATH\"
+                            mkdir -p \"$APP_DEPLOY_PATH\"
+                            chmod 755 \"$APP_CODE_PATH\"
+                            chmod 755 \"$APP_DEPLOY_PATH\"
+                        "
                         
                         rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
                         scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_DEPLOY_PATH}/
                         
-                        ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
-                        DOCKER_REGISTRY=${DOCKER_REGISTRY}
-                        GITHUB_OWNER=${GITHUB_OWNER}
-                        DOCKER_IMAGE=${DOCKER_IMAGE}
-                        DOCKER_TAG=${DOCKER_TAG}
-                        APP_DEPLOY_PATH=${APP_DEPLOY_PATH}
+                        ssh ${DEPLOY_PPROD_SERVER} "cat > \"$APP_CODE_PATH\"/.env << EOL
+                        DOCKER_REGISTRY=\"$DOCKER_REGISTRY\"
+                        GITHUB_OWNER=\"$GITHUB_OWNER\"
+                        DOCKER_IMAGE=\"$DOCKER_IMAGE\"
+                        DOCKER_TAG=\"$DOCKER_TAG\"
+                        APP_DEPLOY_PATH=\"$APP_DEPLOY_PATH\"
                         EOL"
                     '''
                 }
@@ -153,42 +153,6 @@ pipeline {
                 sh '''
                     apt-get update && apt-get install -y openssh-client
                 '''
-                sshagent(credentials: ['jenkins-ssh-private-key']) {
-                    sh '''
-                        mkdir -p ~/.ssh
-                        chmod 700 ~/.ssh
-                        TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
-                        ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
-                        chmod 644 ~/.ssh/known_hosts
-
-                        ssh ${DEPLOY_PPROD_SERVER} '
-                            if ! command -v docker &> /dev/null; then
-                                echo "Docker not found"
-                                exit 1
-                            fi
-                            if ! docker info &> /dev/null; then
-                                echo "Docker daemon not running"
-                                exit 1
-                            fi
-
-                            mkdir -p ${APP_CODE_PATH}
-                            mkdir -p ${APP_DEPLOY_PATH}
-                            chmod 755 ${APP_CODE_PATH}
-                            chmod 755 ${APP_DEPLOY_PATH}
-                        '
-                        
-                        rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
-                        scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_DEPLOY_PATH}/
-
-                        ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
-                        DOCKER_REGISTRY=${DOCKER_REGISTRY}
-                        GITHUB_OWNER=${GITHUB_OWNER}
-                        DOCKER_IMAGE=${DOCKER_IMAGE}
-                        DOCKER_TAG=${DOCKER_TAG}
-                        APP_DEPLOY_PATH=${APP_DEPLOY_PATH}
-                        EOL"
-                    '''
-                }
             }
         }
     }
