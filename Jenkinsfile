@@ -107,7 +107,7 @@ pipeline {
                     TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
                     ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                     chmod 644 ~/.ssh/known_hosts
-                    ssh -o StrictHostKeyChecking=no ${DEPLOY_PPROD_SERVER} "touch fromjenkins.txt"
+                    ssh -o StrictHostKeyChecking=no corentin@147.93.55.84 "touch fromjenkins.txt"
                     '''
                 }
             }
