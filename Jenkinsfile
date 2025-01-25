@@ -10,7 +10,6 @@ pipeline {
         githubPush()
     }
 
-
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -50,7 +49,7 @@ pipeline {
             }
             steps {
                 echo 'Unit Tests...'
-                //sh 'mvn clean test -Dtest=**/*UnitTest'
+                sh 'mvn clean test -Dtest=**/*UnitTest'
             }
         }
 
