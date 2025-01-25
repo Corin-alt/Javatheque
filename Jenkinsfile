@@ -105,6 +105,9 @@ pipeline {
             steps {
                 sshagent(credentials: ['deploy-key']) {
                     sh '''
+                    apt-get update
+                    apt-get install -y openssh-client
+                    eval $(ssh-agent -s)
                     ssh $DEPLOY_PPROD_SERVER "touch /path/to/fromjenkins.txt"
                     '''
                 }
