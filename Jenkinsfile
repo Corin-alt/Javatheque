@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'maven:3.9.9-eclipse-temurin-17'
-            args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
+            args '-u root -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker'
         }
     }
 
@@ -30,6 +30,7 @@ pipeline {
                 sh 'docker --version'
                 sh '''
                     apt-get update
+                    apt-get install -y docker.io
                 '''
             }
         }
