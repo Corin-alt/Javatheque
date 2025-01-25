@@ -13,10 +13,8 @@ pipeline {
        
         GLASSFISH_ADMIN_PASSWORD = credentials('glassfish-admin-password')
 
-
         GITHUB_OWNER = 'corin-alt'
         GITHUB_TOKEN = credentials('github-token')
-        
         
         DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server')
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server')
@@ -152,7 +150,7 @@ pipeline {
                 }
             }
             steps {
-             sh '''
+                sh '''
                     apt-get update && apt-get install -y openssh-client
                 '''
                 sshagent(credentials: ['jenkins-ssh-private-key']) {
@@ -182,7 +180,6 @@ pipeline {
                         rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
                         scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_DEPLOY_PATH}/
 
-                        # Créer .env
                         ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
                         DOCKER_REGISTRY=${DOCKER_REGISTRY}
                         GITHUB_OWNER=${GITHUB_OWNER}
@@ -191,6 +188,7 @@ pipeline {
                         APP_DEPLOY_PATH=${APP_DEPLOY_PATH}
                         EOL"
                     '''
+                }
             }
         }
     }
@@ -218,4 +216,3 @@ pipeline {
             }
         }
     }
-}
