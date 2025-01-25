@@ -34,7 +34,8 @@ pipeline {
             }
             steps {
                 sh 'mvn clean package -DskipTests'
-                stash name: 'war-artifact', includes: 'target/${APP_NAME}.war'
+                sh 'ls -l target/' 
+                stash name: 'war-artifact', includes: "target/javatheque.war"
             }
         }
 
