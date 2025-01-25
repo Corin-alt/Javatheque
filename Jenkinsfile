@@ -69,12 +69,16 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                     script {
-                        def dockerfileChanged = sh(script: 'git diff --name-only HEAD^ HEAD | grep "Dockerfile"', returnStatus: true) == 0
+                        def dockerfileChanged
+                        try {
+                            dockerfileChanged = sh(script: 'git diff --name-only HEAD^ HEAD | grep "Dockerfile"', returnStatus: true) == 0
+                        } catch (Exception e) {
+                            dockerfileChanged = false
+                        }
 
                         if (dockerfileChanged) {
                             sh '''
                             mkdir -p /root/.docker
-                            docker version
                             docker build --build-arg ADMIN_PASSWORD=${GLASSFISH_ADMIN_PASSWORD} \
                                     -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
                             echo $GITHUB_TOKEN | docker login ${DOCKER_REGISTRY} -u ${GITHUB_OWNER} --password-stdin
@@ -82,7 +86,7 @@ pipeline {
                             docker logout ${DOCKER_REGISTRY}
                             '''
                         } else {
-                            echo 'Dockerfile unchanged, build skip'
+                            echo 'Dockerfile unchanged, build skipped'
                         }
                     }
                 }
@@ -103,11 +107,9 @@ pipeline {
                 }
             }
             steps {
+                sh 'apt-get update && apt-get install -y openssh-client'
                 sshagent(credentials: ['deploy-key']) {
                     sh '''
-                    apt-get update
-                    apt-get install -y openssh-client
-                    eval $(ssh-agent -s)
                     ssh $DEPLOY_PPROD_SERVER "touch /path/to/fromjenkins.txt"
                     '''
                 }

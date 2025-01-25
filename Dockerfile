@@ -9,20 +9,10 @@ ENV GLASSFISH_HOME=/opt/glassfish7 \
     DOMAIN_DIR=/opt/glassfish7/glassfish/domains/domain1 \
     PATH=$PATH:/opt/glassfish7/bin
 
+# Install Python and Locust
 RUN apt-get update && \
-    apt-get install -y wget unzip python3-full python3-pip && \
+    apt-get install -y python3-full python3-pip && \
     python3 -m pip install --break-system-packages locust && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-    apt-get update && \
-    apt-get install -y ./google-chrome-stable_current_amd64.deb && \
-    LATEST_DRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE") && \
-    wget -N "https://chromedriver.storage.googleapis.com/$LATEST_DRIVER_VERSION/chromedriver_linux64.zip" && \
-    unzip chromedriver_linux64.zip && \
-    mv chromedriver /usr/local/bin/ && \
-    chmod +x /usr/local/bin/chromedriver && \
-    rm google-chrome-stable_current_amd64.deb chromedriver_linux64.zip && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r glassfish && \
@@ -48,7 +38,7 @@ RUN echo "AS_ADMIN_PASSWORD=" > /tmp/pwdfile && \
     chown -R glassfish:glassfish $GLASSFISH_HOME
 
 VOLUME ["$DEPLOY_DIR"]
-EXPOSE 8080 4848 8181 8089
+EXPOSE 8080 4848 8181
 
 USER glassfish
 CMD ["asadmin", "start-domain", "--verbose"]
