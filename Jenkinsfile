@@ -1,11 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9.9-eclipse-temurin-17'
-            args '-v $HOME/.m2:/root/.m2 -u root'
-            reuseNode true
-        }
-    }
+    agent none
 
     triggers {
         githubPush()
@@ -26,18 +20,36 @@ pipeline {
 
     stages {
         stage('Maven Build') {
+            agent {
+                docker {
+                    image 'maven:3.9.9-eclipse-temurin-17'
+                    args '-v $HOME/.m2:/root/.m2 -u root'
+                }
+            }
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Unit Tests') {
+            agent {
+                docker {
+                    image 'maven:3.9.9-eclipse-temurin-17'
+                    args '-v $HOME/.m2:/root/.m2 -u root'
+                }
+            }
             steps {
                 sh 'mvn clean test -Dtest=**/*UnitTest'
             }
         }
 
         stage('Build Docker Image') {
+            agent {
+                docker {
+                    image 'docker:dind'
+                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
             when {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
@@ -49,15 +61,18 @@ pipeline {
             }
             steps {
                 script {
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'github-token') {
-                        def customImage = docker.build("${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}")
-                        customImage.push()
-                    }
+                    sh 'docker --version'   
                 }
             }
         }
 
         stage('Deploy to Pre-production') {
+            agent {
+                docker {
+                    image 'ubuntu:latest'
+                    args '-u root'
+                }
+            }
             when {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
@@ -70,6 +85,12 @@ pipeline {
         }
 
         stage('Deploy to Production') {
+            agent {
+                docker {
+                    image 'ubuntu:latest'
+                    args '-u root'
+                }
+            }
             when {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
