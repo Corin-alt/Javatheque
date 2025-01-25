@@ -34,7 +34,7 @@ pipeline {
             }
             steps {
                 sh 'mvn clean package -DskipTests'
-                stash includes: 'target/*.war', name: 'warFile'
+                archiveArtifacts artifacts: 'target/*.war', fingerprint: true
             }
         }
 
@@ -100,7 +100,7 @@ pipeline {
                     apt-get update && apt-get install -y openssh-client rsync
                     mkdir -p target
                 '''
-                unstash 'warFile'
+                copyArtifacts filter: 'target/*.war', fingerprintArtifacts: true, projectName: '${JOB_NAME}', selector: specific('${BUILD_NUMBER}')
                 sshagent(credentials: ['jenkins-ssh-private-key']) {
                     sh '''
                     mkdir -p ~/.ssh
