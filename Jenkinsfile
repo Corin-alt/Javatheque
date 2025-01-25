@@ -12,7 +12,7 @@ pipeline {
 
     tools {
         maven 'Maven'
-        dockerTool "Docker"
+        dockerTool 'Docker'
     }
         
     environment {
@@ -39,14 +39,18 @@ pipeline {
         }
 
         stage('Maven Build') {
-            when { expression { return env.STAGE_NAME != 'Environnement Setup' && currentBuild.rawBuild.getPreviousBuiltBuild()?.result == 'SUCCESS' } }
+            when { 
+                expression { currentBuild.previousBuild?.result == 'SUCCESS' }
+            }
             steps {
                 echo 'Maven Build...'
             }
         }
 
         stage('Unit Tests') {
-            when { expression { return env.STAGE_NAME != 'Maven Build' && currentBuild.rawBuild.getPreviousBuiltBuild()?.result == 'SUCCESS' } }
+            when {
+                expression { currentBuild.previousBuild?.result == 'SUCCESS' }
+            }
             steps {
                 echo 'Unit Tests...'
             }
@@ -55,7 +59,7 @@ pipeline {
         stage('Build Docker Image') {
             when {
                 allOf {
-                    expression { return env.STAGE_NAME != 'Unit Tests' && currentBuild.rawBuild.getPreviousBuiltBuild()?.result == 'SUCCESS' }
+                    expression { currentBuild.previousBuild?.result == 'SUCCESS' }
                     anyOf {
                         branch 'main'
                         branch 'dev'
@@ -70,7 +74,7 @@ pipeline {
         stage('Deploy to Pre-production') {
             when {
                 allOf {
-                    expression { return env.STAGE_NAME != 'Build Docker Image' && currentBuild.rawBuild.getPreviousBuiltBuild()?.result == 'SUCCESS' }
+                    expression { currentBuild.previousBuild?.result == 'SUCCESS' }
                     branch 'dev'
                 }
             }
@@ -82,7 +86,7 @@ pipeline {
         stage('Deploy to Production') {
             when {
                 allOf {
-                    expression { return env.STAGE_NAME != 'Build Docker Image' && currentBuild.rawBuild.getPreviousBuiltBuild()?.result == 'SUCCESS' }
+                    expression { currentBuild.previousBuild?.result == 'SUCCESS' }
                     branch 'main'
                 }
             }
