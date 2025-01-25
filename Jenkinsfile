@@ -21,8 +21,8 @@ pipeline {
         DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server')
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server')
         
-        APP_CODE_PATH = '/apps/java/src'
-        APP_DEPLOY_PATH = '/apps/java/deploy'
+        APP_CODE_PATH = '/apps/javatheque/sourcecode'
+        APP_DEPLOY_PATH = '/apps/javatheque/deploy'
     }
 
     stages {
@@ -68,15 +68,23 @@ pipeline {
             }
             steps {
                 withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                    sh '''
-                        mkdir -p /root/.docker
-                        docker version
-                        docker build --build-arg ADMIN_PASSWORD=${GLASSFISH_ADMIN_PASSWORD} \
-                                   -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
-                        echo $GITHUB_TOKEN | docker login ${DOCKER_REGISTRY} -u ${GITHUB_OWNER} --password-stdin
-                        docker push ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                        docker logout ${DOCKER_REGISTRY}
-                    '''
+                    script {
+                        def dockerfileChanged = sh(script: 'git diff --name-only HEAD^ HEAD | grep "Dockerfile"', returnStatus: true) == 0
+
+                        if (dockerfileChanged) {
+                            sh '''
+                            mkdir -p /root/.docker
+                            docker version
+                            docker build --build-arg ADMIN_PASSWORD=${GLASSFISH_ADMIN_PASSWORD} \
+                                    -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
+                            echo $GITHUB_TOKEN | docker login ${DOCKER_REGISTRY} -u ${GITHUB_OWNER} --password-stdin
+                            docker push ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                            docker logout ${DOCKER_REGISTRY}
+                            '''
+                        } else {
+                            echo 'Dockerfile unchanged, build skip'
+                        }
+                    }
                 }
             }
         }
@@ -95,7 +103,10 @@ pipeline {
                 }
             }
             steps {
-                echo 'Deploy to Pre-production...'
+                sshagent(credentials: ['deploy-key']) {
+                    sh 'touch fromjenkins.txt'
+                        
+                }
             }
         }
 
