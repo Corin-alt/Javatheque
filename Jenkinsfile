@@ -110,7 +110,6 @@ pipeline {
 
                     ssh ${DEPLOY_PPROD_SERVER} "
                         mkdir -p /apps && \
-                        chown -R $USER:$USER /apps && \
                         mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH} && \
                         chmod 755 ${APP_CODE_PATH} ${APP_DEPLOY_PATH}
                     "
