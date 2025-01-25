@@ -2,7 +2,8 @@ pipeline {
     agent {
         docker {
             image 'maven:3.9.9-eclipse-temurin-17'
-            args '-u root' 
+            args '-v $HOME/.m2:/root/.m2 -u root'
+            reuseNode true
         }
     }
 
@@ -16,7 +17,7 @@ pipeline {
         DOCKER_TAG = 'latest'
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
-
+        GITHUB_TOKEN = credentials('github-token')
         DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server') 
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server') 
         APP_CODE_PATH = '/apps/java/src'
@@ -26,26 +27,17 @@ pipeline {
     stages {
         stage('Maven Build') {
             steps {
-                echo 'Maven Build...'
                 sh 'mvn clean package -DskipTests'
             }
         }
 
         stage('Unit Tests') {
             steps {
-                echo 'Unit Tests...'
                 sh 'mvn clean test -Dtest=**/*UnitTest'
             }
         }
 
-
         stage('Build Docker Image') {
-            agent {
-                docker {
-                    image 'docker:24.0'  
-                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
             when {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
@@ -56,11 +48,12 @@ pipeline {
                 }
             }
             steps {
-                echo 'Installing Docker and building image...'
-                sh '''
-                    # Vérification de Docker
-                    docker --version
-                '''
+                script {
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'github-token') {
+                        def customImage = docker.build("${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}")
+                        customImage.push()
+                    }
+                }
             }
         }
 
@@ -91,19 +84,13 @@ pipeline {
 
     post {
         always {
-            node('built-in') {              
-                cleanWs()
-            }
+            cleanWs()
         }
         failure {
-            node('built-in') {
-                echo 'Pipeline failed!'
-            }
+            echo 'Pipeline failed!'
         }
         success {
-            node('built-in') {
-                echo 'Pipeline completed successfully!'
-            }
+            echo 'Pipeline completed successfully!'
         }
     }
 }
