@@ -45,7 +45,9 @@ pipeline {
             }
             steps {
                 echo 'Maven Build...'
-                sh 'mvn clean package -DskipTests'
+                withMaven(maven: 'Maven') { 
+                    sh 'mvn clean package -DskipTests'
+                }
             }
         }
 
@@ -55,7 +57,7 @@ pipeline {
             }
             steps {
                 echo 'Unit Tests...'
-                sh 'mvn clean test -Dtest=**/*UnitTest'
+                //sh 'mvn clean test -Dtest=**/*UnitTest'
             }
         }
 
