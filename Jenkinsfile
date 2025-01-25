@@ -2,14 +2,14 @@ pipeline {
     agent {
         docker {
             image 'maven:3.9.9-eclipse-temurin-17'
-            args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
+            args '-u root' 
         }
     }
 
     triggers {
         githubPush()
     }
-    
+
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -24,21 +24,7 @@ pipeline {
     }
 
     stages {
-        stage('Environnement Setup') {
-            steps {
-                echo 'Environnement configuration...'
-                sh '''
-                    apt-get update
-                    sh 'apt-get install -y docker.io'
-                    sh 'docker --version'
-                '''
-            }
-        }
-
         stage('Maven Build') {
-            when { 
-                expression { currentBuild.currentResult == 'SUCCESS' }
-            }
             steps {
                 echo 'Maven Build...'
                 sh 'mvn clean package -DskipTests'
@@ -46,16 +32,20 @@ pipeline {
         }
 
         stage('Unit Tests') {
-            when {
-                expression { currentBuild.currentResult == 'SUCCESS' }
-            }
             steps {
                 echo 'Unit Tests...'
                 sh 'mvn clean test -Dtest=**/*UnitTest'
             }
         }
 
+
         stage('Build Docker Image') {
+            agent {
+                docker {
+                    image 'ubuntu:latest'
+                    args '-u root'
+                }
+            }
             when {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
@@ -66,8 +56,19 @@ pipeline {
                 }
             }
             steps {
-                echo 'Build Docker Image...'
+                echo 'Installing Docker and building image...'
+                sh '''
+                    # Installation de Docker
+                    apt-get update
+                    apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+                    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+                    apt-get update
+                    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
+                    # Vérification de Docker
+                    docker --version
+                '''
             }
         }
 
