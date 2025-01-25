@@ -34,7 +34,7 @@ pipeline {
             }
             steps {
                 sh 'mvn clean package -DskipTests'
-                sh 'ls -l target/' 
+                chmod -R 777 target/
                 stash name: 'war-artifact', includes: "target/javatheque.war"
             }
         }
@@ -99,6 +99,8 @@ pipeline {
             steps {
                 sh '''
                     apt-get update && apt-get install -y openssh-client rsync
+                    mkdir -p target
+                    chmod 777 target
                 '''
                 sshagent(credentials: ['jenkins-ssh-private-key']) {
                     unstash 'war-artifact'
