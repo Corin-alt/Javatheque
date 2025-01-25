@@ -6,6 +6,10 @@ pipeline {
         }
     }
 
+    trigger {
+        githubPush()
+    }
+
     tools {
         maven='Maven'
         dockerTool="Docker"
