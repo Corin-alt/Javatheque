@@ -103,9 +103,11 @@ pipeline {
                 sshagent(credentials: ['deploy-key']) {
                     sh '''
                     mkdir -p ~/.ssh
+                    chmod 700 ~/.ssh
                     TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
                     ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
-                    ssh $DEPLOY_PPROD_SERVER "touch /path/to/fromjenkins.txt"
+                    chmod 644 ~/.ssh/known_hosts
+                    ssh ${DEPLOY_PPROD_SERVER} "touch fromjenkins.txt"
                     '''
                 }
             }
