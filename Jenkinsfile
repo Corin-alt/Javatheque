@@ -34,6 +34,7 @@ pipeline {
                 echo 'Environnement configuration...'
                 sh '''
                     apt-get update
+                    apt-get install -y openjdk-17-jdk
                 '''
             }
         }
@@ -44,6 +45,7 @@ pipeline {
             }
             steps {
                 echo 'Maven Build...'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
@@ -53,6 +55,7 @@ pipeline {
             }
             steps {
                 echo 'Unit Tests...'
+                sh 'mvn clean test -Dtest=**/*UnitTest'
             }
         }
 
