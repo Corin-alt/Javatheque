@@ -92,7 +92,7 @@ pipeline {
         stage('Deploy to Pre-production') {
             agent {
                 docker {
-                    image 'alpine:latest'
+                    image 'ubuntu:latest'
                     args '-u root'
                 }
             }
@@ -104,8 +104,9 @@ pipeline {
             }
             steps {
                 sshagent(credentials: ['deploy-key']) {
-                    sh 'touch fromjenkins.txt'
-                        
+                    sh '''
+                    ssh $DEPLOY_PPROD_SERVER "touch /path/to/fromjenkins.txt"
+                    '''
                 }
             }
         }
@@ -113,7 +114,7 @@ pipeline {
         stage('Deploy to Production') {
             agent {
                 docker {
-                    image 'alpine:latest'
+                    image 'ubuntu:latest'
                     args '-u root'
                 }
             }
