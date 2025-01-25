@@ -32,7 +32,6 @@ pipeline {
         stage('Environnement Setup') {
             steps {
                 echo 'Environnement configuration...'
-                echo "Current branch: ${env.GIT_BRANCH}"
                 sh '''
                     apt-get update
                 '''
@@ -62,8 +61,8 @@ pipeline {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
                     anyOf {
-                        branch 'main'
-                        branch 'dev'
+                        expression { env.GIT_BRANCH == 'origin/dev' }
+                        expression { env.GIT_BRANCH == 'origin/main' }
                     }
                 }
             }
@@ -76,7 +75,7 @@ pipeline {
             when {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
-                    branch 'dev'
+                    expression { env.GIT_BRANCH == 'origin/dev' }
                 }
             }
             steps {
@@ -88,7 +87,7 @@ pipeline {
             when {
                 allOf {
                     expression { currentBuild.currentResult == 'SUCCESS' }
-                    branch 'main'
+                    expression { env.GIT_BRANCH == 'origin/main' }
                 }
             }
             steps {
