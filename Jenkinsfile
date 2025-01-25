@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'ubuntu:latest'
+            image 'maven:3.9.9-eclipse-temurin-17'
             args '-u root'
         }
     }
@@ -10,11 +10,7 @@ pipeline {
         githubPush()
     }
 
-    tools {
-        maven 'Maven'
-        dockerTool 'Docker'
-    }
-        
+
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -34,7 +30,6 @@ pipeline {
                 echo 'Environnement configuration...'
                 sh '''
                     apt-get update
-                    apt-get install -y openjdk-17-jdk
                 '''
             }
         }
@@ -45,9 +40,7 @@ pipeline {
             }
             steps {
                 echo 'Maven Build...'
-                withMaven { 
-                    sh 'mvn clean package -DskipTests'
-                }
+                sh 'mvn clean package -DskipTests'
             }
         }
 
