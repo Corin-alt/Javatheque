@@ -32,7 +32,7 @@ pipeline {
         stage('Environnement Setup') {
             steps {
                 echo 'Environnement configuration...'
-                echo "Current branch: ${env.BRANCH_NAME}"
+                echo "Current branch: ${env.GIT_BRANCH}"
                 sh '''
                     apt-get update
                 '''
