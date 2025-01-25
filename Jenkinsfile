@@ -96,7 +96,10 @@ pipeline {
                 }
             }
             steps {
-                sh 'apt-get update && apt-get install -y openssh-client'
+                sh '''
+                    echo "DEPLOY_PPROD_SERVER: $DEPLOY_PPROD_SERVER"
+                    apt-get update && apt-get install -y openssh-client
+                '''
                 sshagent(credentials: ['deploy-key']) {
                     sh '''
                     mkdir -p ~/.ssh
