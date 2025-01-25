@@ -107,7 +107,8 @@ pipeline {
                         ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                         chmod 644 ~/.ssh/known_hosts
 
-                        echo "${SUDO_PASSWORD}" | ssh ${DEPLOY_PPROD_SERVER} "sudo -S chown -R \$(whoami):\$(whoami) /apps && \
+                        echo "${SUDO_PASSWORD}" | ssh ${DEPLOY_PPROD_SERVER} "sudo -S mkdir -p /apps && \
+                            sudo -S chown -R \$(whoami):\$(whoami) /apps && \
                             mkdir -p \"${APP_CODE_PATH}\" && \
                             mkdir -p \"${APP_DEPLOY_PATH}\" && \
                             chmod 755 \"${APP_CODE_PATH}\" && \
