@@ -47,7 +47,7 @@ pipeline {
             agent {
                 docker {
                     image 'docker:dind'
-                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
+                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock -u root'
                 }
             }
             when {
@@ -62,11 +62,22 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                     sh '''
-                        mkdir -p $HOME/.docker
+                        # Assure-toi de créer le répertoire .docker dans /root
+                        mkdir -p /root/.docker
+                        
+                        # Vérifie la version de Docker pour assurer que Docker fonctionne correctement
                         docker version
+
+                        # Construction de l'image Docker
                         docker build -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
+                        
+                        # Connexion à Docker avec le token GitHub
                         echo $GITHUB_TOKEN | docker login ${DOCKER_REGISTRY} -u ${GITHUB_OWNER} --password-stdin
+                        
+                        # Push de l'image Docker
                         docker push ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                        
+                        # Déconnexion de Docker
                         docker logout ${DOCKER_REGISTRY}
                     '''
                 }
