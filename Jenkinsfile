@@ -99,8 +99,10 @@ pipeline {
                 sh '''
                     apt-get update && apt-get install -y openssh-client rsync
                     mkdir -p target
+                    chmod -R 777 target
                 '''
                 copyArtifacts filter: 'target/*.war', fingerprintArtifacts: true, projectName: '${JOB_NAME}', selector: specific('${BUILD_NUMBER}')
+                sh 'chmod -R 777 target'
                 sshagent(credentials: ['jenkins-ssh-private-key']) {
                     sh '''
                     mkdir -p ~/.ssh
