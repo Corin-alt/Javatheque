@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'maven:3.9.9-eclipse-temurin-17'
-            args '-u root'
+            args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
@@ -10,11 +10,6 @@ pipeline {
         githubPush()
     }
     
-
-    tools {
-        dockerTool 'Docker'
-    }
-
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -32,6 +27,7 @@ pipeline {
         stage('Environnement Setup') {
             steps {
                 echo 'Environnement configuration...'
+                sh 'docker --version'
                 sh '''
                     apt-get update
                 '''
@@ -70,19 +66,7 @@ pipeline {
             }
             steps {
                 echo 'Build Docker Image...'
-                script {
-                    def imageFullName = "${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}"
-                    
-                    sh "docker build -t ${imageFullName}:${DOCKER_TAG} ."
-                    
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        sh """
-                            echo \$GITHUB_TOKEN | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
-                            docker push ${imageFullName}:${DOCKER_TAG}
-                            docker logout ghcr.io
-                        """
-                    }
-                }
+
             }
         }
 
