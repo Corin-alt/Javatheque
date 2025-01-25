@@ -113,7 +113,11 @@ pipeline {
                     chmod 644 ~/.ssh/known_hosts
 
                     rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
-                    scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
+
+                    chmod +x check_depedencies.sh
+                    ./check_depedencies.sh
+
+                    scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/target
 
                     ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_PATH}/.env << EOL
                     DOCKER_REGISTRY=${DOCKER_REGISTRY}
