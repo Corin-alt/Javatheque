@@ -36,8 +36,8 @@ pipeline {
             steps {
                 sh 'mvn clean package -DskipTests'
                 sh '''
-                    IFS='@' read -r user ip <<< "$DEPLOY_PPROD_SERVER"
-                    echo "Testing connection to IP: $ip"
+                    echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $2}'
+                    ip=$(echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $2}')
                 '''
             }
         }
