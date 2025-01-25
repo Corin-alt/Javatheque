@@ -6,7 +6,7 @@ pipeline {
         }
     }
 
-    trigger {
+    triggers {
         githubPush()
     }
 
