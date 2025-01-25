@@ -37,6 +37,7 @@ pipeline {
                 sh 'mvn clean package -DskipTests'
                 sh '''
                     echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $2}'
+                    user=$(echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $1}')
                     ip=$(echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $2}')
                 '''
             }
