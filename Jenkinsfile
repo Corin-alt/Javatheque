@@ -107,22 +107,22 @@ pipeline {
                         ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                         chmod 644 ~/.ssh/known_hosts
 
-                        ssh ${DEPLOY_PPROD_SERVER} "echo ${SUDO_PASSWORD} | sudo -S chown -R $(whoami):$(whoami) /apps && \
-                            mkdir -p \"$APP_CODE_PATH\" && \
-                            mkdir -p \"$APP_DEPLOY_PATH\" && \
-                            chmod 755 \"$APP_CODE_PATH\" && \
-                            chmod 755 \"$APP_DEPLOY_PATH\"
+                        echo "${SUDO_PASSWORD}" | ssh ${DEPLOY_PPROD_SERVER} "sudo -S chown -R \$(whoami):\$(whoami) /apps && \
+                            mkdir -p \"${APP_CODE_PATH}\" && \
+                            mkdir -p \"${APP_DEPLOY_PATH}\" && \
+                            chmod 755 \"${APP_CODE_PATH}\" && \
+                            chmod 755 \"${APP_DEPLOY_PATH}\"
                         "
                         
                         rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
                         scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_DEPLOY_PATH}/
                         
-                        ssh ${DEPLOY_PPROD_SERVER} "cat > \"$APP_CODE_PATH\"/.env << EOL
-                        DOCKER_REGISTRY=\"$DOCKER_REGISTRY\"
-                        GITHUB_OWNER=\"$GITHUB_OWNER\"
-                        DOCKER_IMAGE=\"$DOCKER_IMAGE\"
-                        DOCKER_TAG=\"$DOCKER_TAG\"
-                        APP_DEPLOY_PATH=\"$APP_DEPLOY_PATH\"
+                        ssh ${DEPLOY_PPROD_SERVER} "cat > \"${APP_CODE_PATH}\"/.env << EOL
+                        DOCKER_REGISTRY=\"${DOCKER_REGISTRY}\"
+                        GITHUB_OWNER=\"${GITHUB_OWNER}\"
+                        DOCKER_IMAGE=\"${DOCKER_IMAGE}\"
+                        DOCKER_TAG=\"${DOCKER_TAG}\"
+                        APP_DEPLOY_PATH=\"${APP_DEPLOY_PATH}\"
                         EOL"
                     '''
                 }
