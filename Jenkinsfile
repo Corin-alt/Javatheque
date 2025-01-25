@@ -40,7 +40,7 @@ pipeline {
 
         stage('Maven Build') {
             when { 
-                expression { currentBuild.previousBuild?.result == 'SUCCESS' }
+                expression { currentBuild.currentResult == 'SUCCESS' }
             }
             steps {
                 echo 'Maven Build...'
@@ -49,7 +49,7 @@ pipeline {
 
         stage('Unit Tests') {
             when {
-                expression { currentBuild.previousBuild?.result == 'SUCCESS' }
+                expression { currentBuild.currentResult == 'SUCCESS' }
             }
             steps {
                 echo 'Unit Tests...'
@@ -59,7 +59,7 @@ pipeline {
         stage('Build Docker Image') {
             when {
                 allOf {
-                    expression { currentBuild.previousBuild?.result == 'SUCCESS' }
+                    expression { currentBuild.currentResult == 'SUCCESS' }
                     anyOf {
                         branch 'main'
                         branch 'dev'
@@ -74,7 +74,7 @@ pipeline {
         stage('Deploy to Pre-production') {
             when {
                 allOf {
-                    expression { currentBuild.previousBuild?.result == 'SUCCESS' }
+                    expression { currentBuild.currentResult == 'SUCCESS' }
                     branch 'dev'
                 }
             }
@@ -86,7 +86,7 @@ pipeline {
         stage('Deploy to Production') {
             when {
                 allOf {
-                    expression { currentBuild.previousBuild?.result == 'SUCCESS' }
+                    expression { currentBuild.currentResult == 'SUCCESS' }
                     branch 'main'
                 }
             }
