@@ -96,7 +96,7 @@ pipeline {
             }
             steps {
                 sh '''
-                    apt-get update && apt-get install -y openssh-client
+                    apt-get update && apt-get install -y openssh-client rsync
                 '''
                 sshagent(credentials: ['jenkins-ssh-private-key']) {
                     sh '''
