@@ -34,6 +34,7 @@ pipeline {
             }
             steps {
                 sh 'mvn clean package -DskipTests'
+                stash name: 'war-artifact', includes: 'target/${APP_NAME}.war'
             }
         }
 
@@ -99,6 +100,7 @@ pipeline {
                     apt-get update && apt-get install -y openssh-client rsync
                 '''
                 sshagent(credentials: ['jenkins-ssh-private-key']) {
+                    unstash 'war-artifact'
                     sh '''
                     mkdir -p ~/.ssh
                     chmod 700 ~/.ssh
