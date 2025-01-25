@@ -62,6 +62,17 @@ pipeline {
             steps {
                 script {
                     sh 'docker --version'
+                    def imageFullName = "${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}"
+                    
+                    docker.build("${imageFullName}:${DOCKER_TAG}", ".")
+                    
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        sh """
+                            echo \$GITHUB_TOKEN | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
+                            docker push ${imageFullName}:${DOCKER_TAG}
+                            docker logout ghcr.io
+                        """
+                    }
                 }
             }
         }
