@@ -105,20 +105,13 @@ pipeline {
                         ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                         chmod 644 ~/.ssh/known_hosts
 
-                        ssh ${DEPLOY_PPROD_SERVER} "
-                            if ! command -v docker &> /dev/null; then
-                                echo 'Docker not found'
-                                exit 1
-                            fi
-                            if ! docker info &> /dev/null; then
-                                echo 'Docker daemon not running'
-                                exit 1
-                            fi
-
+                        ssh -l root ${DEPLOY_PPROD_SERVER#*@} "
                             mkdir -p \"$APP_CODE_PATH\"
                             mkdir -p \"$APP_DEPLOY_PATH\"
                             chmod 755 \"$APP_CODE_PATH\"
                             chmod 755 \"$APP_DEPLOY_PATH\"
+                            chown jenkins:jenkins \"$APP_CODE_PATH\"
+                            chown jenkins:jenkins \"$APP_DEPLOY_PATH\"
                         "
                         
                         rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
