@@ -10,10 +10,17 @@ pipeline {
         DOCKER_IMAGE = 'javatheque-env'
         DOCKER_TAG = 'latest'
         DOCKER_REGISTRY = 'ghcr.io'
+       
+        GLASSFISH_ADMIN_PASSWORD = credentials('glassfish-admin-password')
+
+
         GITHUB_OWNER = 'corin-alt'
         GITHUB_TOKEN = credentials('github-token')
+        
+        
         DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server')
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server')
+        
         APP_CODE_PATH = '/apps/java/src'
         APP_DEPLOY_PATH = '/apps/java/deploy'
     }
@@ -62,22 +69,12 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                     sh '''
-                        # Assure-toi de créer le répertoire .docker dans /root
                         mkdir -p /root/.docker
-                        
-                        # Vérifie la version de Docker pour assurer que Docker fonctionne correctement
                         docker version
-
-                        # Construction de l'image Docker
-                        docker build -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
-                        
-                        # Connexion à Docker avec le token GitHub
+                        docker build --build-arg ADMIN_PASSWORD=${GLASSFISH_ADMIN_PASSWORD} \
+                                   -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
                         echo $GITHUB_TOKEN | docker login ${DOCKER_REGISTRY} -u ${GITHUB_OWNER} --password-stdin
-                        
-                        # Push de l'image Docker
                         docker push ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                        
-                        # Déconnexion de Docker
                         docker logout ${DOCKER_REGISTRY}
                     '''
                 }
