@@ -6,9 +6,7 @@ pipeline {
         }
     }
 
-    triggers {
-        githubPush()
-    }
+    triggers { githubPush() }
 
     tools {
         maven 'Maven'
@@ -21,7 +19,6 @@ pipeline {
         DOCKER_TAG = 'latest'
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
-
         DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server') 
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server') 
         APP_CODE_PATH = '/apps/java/src'
@@ -32,38 +29,30 @@ pipeline {
         stage('Environnement Setup') {
             steps {
                 echo 'Environnement configuration...'
-                sh '''
-                    apt-get update
-                '''
+                sh 'apt-get update'
             }
         }
 
         stage('Maven Build') {
-            when { 
-                expression { currentBuild.currentResult == 'SUCCESS' }
-            }
+            needs(['Environnement Setup'])
             steps {
                 echo 'Maven Build...'
             }
         }
 
         stage('Unit Tests') {
-            when {
-                expression { currentBuild.currentResult == 'SUCCESS' }
-            }
+            needs(['Maven Build'])
             steps {
                 echo 'Unit Tests...'
             }
         }
 
         stage('Build Docker Image') {
+            needs(['Unit Tests'])
             when {
-                allOf {
-                    expression { currentBuild.currentResult == 'SUCCESS' }
-                    anyOf {
-                        branch 'main'
-                        branch 'dev'
-                    }
+                anyOf {
+                    branch 'main'
+                    branch 'dev'
                 }
             }
             steps {
@@ -72,24 +61,16 @@ pipeline {
         }
 
         stage('Deploy to Pre-production') {
-            when {
-                allOf {
-                    expression { currentBuild.currentResult == 'SUCCESS' }
-                    branch 'dev'
-                }
-            }
+            needs(['Build Docker Image'])
+            when { branch 'dev' }
             steps {
                 echo 'Deploy to Pre-production...'
             }
         }
 
         stage('Deploy to Production') {
-            when {
-                allOf {
-                    expression { currentBuild.currentResult == 'SUCCESS' }
-                    branch 'main'
-                }
-            }
+            needs(['Build Docker Image'])
+            when { branch 'main' }
             steps {
                 echo 'Deploy to Production...'
             }
