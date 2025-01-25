@@ -116,14 +116,13 @@ pipeline {
 
                     scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/target
 
-                    ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_PATH}/.env << EOL
-                    DOCKER_REGISTRY=${DOCKER_REGISTRY}
-                    GITHUB_OWNER=${GITHUB_OWNER}
-                    DOCKER_IMAGE=${DOCKER_IMAGE}
-                    DOCKER_TAG=${DOCKER_TAG}
-                    APP_PATH=${APP_PATH}
-                    EOL"
-                    '''
+               ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_PATH}/.env << 'EOL'
+DOCKER_REGISTRY=${DOCKER_REGISTRY}
+GITHUB_OWNER=${GITHUB_OWNER}
+DOCKER_IMAGE=${DOCKER_IMAGE}
+DOCKER_TAG=${DOCKER_TAG}
+APP_PATH=${APP_PATH}EOL"
+           '''
                 }
             }
         }

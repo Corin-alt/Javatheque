@@ -43,7 +43,7 @@ install_python() {
     if ! command_exists python3; then
         print_message "Installing Python..."
         sudo apt-get update
-        sudo apt-get install -y python3 python3-pip
+        sudo apt-get install -y python3-full
     else
         print_message "Python is already installed"
     fi
@@ -87,14 +87,14 @@ install_chrome() {
 
 install_selenium() {
     print_message "Installing/Updating Selenium..."
-    python3 -m pip install --upgrade selenium
+    sudo apt install python3-selenium
 }
 
 install_locust() {
     if ! command_exists locust; then
         print_message "Installing Locust..."
         sudo apt-get update
-        python3 -m pip install locust
+        sudo apt install python3-locust
     else
         print_message "Locust is already installed"
     fi
