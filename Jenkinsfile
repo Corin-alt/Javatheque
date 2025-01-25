@@ -35,11 +35,6 @@ pipeline {
             }
             steps {
                 sh 'mvn clean package -DskipTests'
-                sh '''
-                    echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $2}'
-                    user=$(echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $1}')
-                    ip=$(echo "$DEPLOY_PPROD_SERVER" | awk -F'@' '{print $2}')
-                '''
             }
         }
 
@@ -91,7 +86,7 @@ pipeline {
             agent {
                 docker {
                     image 'ubuntu:latest'
-                    args '-u root'
+                    args '-u root --dns 8.8.8.8 --dns 8.8.4.4'
                 }
             }
             when {
@@ -108,7 +103,8 @@ pipeline {
                 sshagent(credentials: ['deploy-key']) {
                     sh '''
                     mkdir -p ~/.ssh
-                    ssh-keyscan -H $DEPLOY_PPROD_SERVER >> ~/.ssh/known_hosts
+                    TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
+                    ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                     ssh $DEPLOY_PPROD_SERVER "touch /path/to/fromjenkins.txt"
                     '''
                 }
