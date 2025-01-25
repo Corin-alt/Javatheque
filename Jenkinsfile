@@ -115,8 +115,6 @@ pipeline {
                     rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
                     scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
 
-                    rm .env
-
                     ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_PATH}/.env << EOL
                     DOCKER_REGISTRY=${DOCKER_REGISTRY}
                     GITHUB_OWNER=${GITHUB_OWNER}
