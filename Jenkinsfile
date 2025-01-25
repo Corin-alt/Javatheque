@@ -69,25 +69,14 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                     script {
-                        def dockerfileChanged
-                        try {
-                            dockerfileChanged = sh(script: 'git diff --name-only HEAD^ HEAD | grep "Dockerfile"', returnStatus: true) == 0
-                        } catch (Exception e) {
-                            dockerfileChanged = false
-                        }
-
-                        if (dockerfileChanged) {
-                            sh '''
-                            mkdir -p /root/.docker
-                            docker build --build-arg ADMIN_PASSWORD=${GLASSFISH_ADMIN_PASSWORD} \
-                                    -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
-                            echo $GITHUB_TOKEN | docker login ${DOCKER_REGISTRY} -u ${GITHUB_OWNER} --password-stdin
-                            docker push ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                            docker logout ${DOCKER_REGISTRY}
-                            '''
-                        } else {
-                            echo 'Dockerfile unchanged, build skipped'
-                        }
+                        sh '''
+                        mkdir -p /root/.docker
+                        docker build --build-arg ADMIN_PASSWORD=${GLASSFISH_ADMIN_PASSWORD} \
+                                -t ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} .
+                        echo $GITHUB_TOKEN | docker login ${DOCKER_REGISTRY} -u ${GITHUB_OWNER} --password-stdin
+                        docker push ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker logout ${DOCKER_REGISTRY}
+                        '''
                     }
                 }
             }
@@ -110,6 +99,8 @@ pipeline {
                 sh 'apt-get update && apt-get install -y openssh-client'
                 sshagent(credentials: ['deploy-key']) {
                     sh '''
+                    mkdir -p ~/.ssh
+                    ssh-keyscan -H $DEPLOY_PPROD_SERVER >> ~/.ssh/known_hosts
                     ssh $DEPLOY_PPROD_SERVER "touch /path/to/fromjenkins.txt"
                     '''
                 }
