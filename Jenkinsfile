@@ -12,8 +12,8 @@ pipeline {
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
         GITHUB_TOKEN = credentials('github-token')
-        DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server') 
-        DEPLOY_PROD_SERVER = credentials('deploy-prod-server') 
+        DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server')
+        DEPLOY_PROD_SERVER = credentials('deploy-prod-server')
         APP_CODE_PATH = '/apps/java/src'
         APP_DEPLOY_PATH = '/apps/java/deploy'
     }
@@ -61,7 +61,7 @@ pipeline {
             }
             steps {
                 script {
-                    sh 'docker --version'   
+                    sh 'docker --version'
                 }
             }
         }
@@ -69,7 +69,7 @@ pipeline {
         stage('Deploy to Pre-production') {
             agent {
                 docker {
-                    image 'ubuntu:latest'
+                    image 'alpine:latest'
                     args '-u root'
                 }
             }
@@ -87,7 +87,7 @@ pipeline {
         stage('Deploy to Production') {
             agent {
                 docker {
-                    image 'ubuntu:latest'
+                    image 'alpine:latest'
                     args '-u root'
                 }
             }
@@ -104,20 +104,20 @@ pipeline {
     }
 
     post {
-        agent {
-            docker {
-                image 'ubuntu:latest'
-                args '-u root'
+        always {
+            node {
+                cleanWs()
             }
         }
-        always {
-            cleanWs()
-        }
         failure {
-            echo 'Pipeline failed!'
+            node {
+                echo 'Pipeline failed!'
+            }
         }
         success {
-            echo 'Pipeline completed successfully!'
+            node {
+                echo 'Pipeline completed successfully!'
+            }
         }
     }
 }
