@@ -104,6 +104,12 @@ pipeline {
     }
 
     post {
+        agent {
+            docker {
+                image 'ubuntu:latest'
+                args '-u root'
+            }
+        }
         always {
             cleanWs()
         }
