@@ -101,30 +101,29 @@ pipeline {
                 '''
                 sshagent(credentials: ['jenkins-ssh-private-key']) {
                     sh '''
-                        mkdir -p ~/.ssh
-                        chmod 700 ~/.ssh
-                        TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
-                        ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
-                        chmod 644 ~/.ssh/known_hosts
+                    mkdir -p ~/.ssh
+                    chmod 700 ~/.ssh
+                    TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
+                    USER=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f1)
+                    ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
+                    chmod 644 ~/.ssh/known_hosts
 
-                        echo "${SUDO_PASSWORD}" | ssh ${DEPLOY_PPROD_SERVER} "
-                            sudo -S mkdir -p /apps && \
-                            sudo -S chown -R \$(whoami):\$(whoami) /apps && \
-                            mkdir -p \"${APP_CODE_PATH}\" \"${APP_DEPLOY_PATH}\" && \
-                            chmod 755 \"${APP_CODE_PATH}\" \"${APP_DEPLOY_PATH}\"
-                        "
+                    ssh ${DEPLOY_PPROD_SERVER} "
+                        mkdir -p /apps && \
+                        chown -R $USER:$USER /apps && \
+                        mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH} && \
+                        chmod 755 ${APP_CODE_PATH} ${APP_DEPLOY_PATH}
+                    "
+                    rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
+                    scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_DEPLOY_PATH}/
 
-                        
-                        rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
-                        scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_DEPLOY_PATH}/
-                        
-                        ssh ${DEPLOY_PPROD_SERVER} "cat > \"${APP_CODE_PATH}\"/.env << EOL
-                        DOCKER_REGISTRY=\"${DOCKER_REGISTRY}\"
-                        GITHUB_OWNER=\"${GITHUB_OWNER}\"
-                        DOCKER_IMAGE=\"${DOCKER_IMAGE}\"
-                        DOCKER_TAG=\"${DOCKER_TAG}\"
-                        APP_DEPLOY_PATH=\"${APP_DEPLOY_PATH}\"
-                        EOL"
+                    ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
+                    DOCKER_REGISTRY=${DOCKER_REGISTRY}
+                    GITHUB_OWNER=${GITHUB_OWNER}
+                    DOCKER_IMAGE=${DOCKER_IMAGE}
+                    DOCKER_TAG=${DOCKER_TAG}
+                    APP_DEPLOY_PATH=${APP_DEPLOY_PATH}
+                    EOL"
                     '''
                 }
             }
