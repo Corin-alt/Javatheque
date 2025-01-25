@@ -42,8 +42,8 @@ pipeline {
         stage('Build Docker Image') {
             agent {
                 docker {
-                    image 'docker:dind'
-                    args '--privileged'
+                    image 'docker:24.0'  
+                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             when {
