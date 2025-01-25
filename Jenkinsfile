@@ -19,8 +19,7 @@ pipeline {
         DEPLOY_PPROD_SERVER = credentials('deploy-pprod-server')
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server')
         
-        APP_CODE_PATH = '/apps/javatheque/sourcecode'
-        APP_DEPLOY_PATH = '/apps/javatheque/deploy'
+        APP_PATH = 'javatheque'
 
         SUDO_PASSWORD = credentials('sudo-password')
     }
@@ -104,24 +103,21 @@ pipeline {
                     mkdir -p ~/.ssh
                     chmod 700 ~/.ssh
                     TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
-                    USER=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f1)
+
                     ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
                     chmod 644 ~/.ssh/known_hosts
 
-                    ssh ${DEPLOY_PPROD_SERVER} "
-                        mkdir -p /apps && \
-                        mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH} && \
-                        chmod 755 ${APP_CODE_PATH} ${APP_DEPLOY_PATH}
-                    "
-                    rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_CODE_PATH}/
-                    scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_DEPLOY_PATH}/
+                    rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
+                    scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
 
-                    ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
+                    rm .env
+
+                    ssh ${DEPLOY_PPROD_SERVER} "cat > ${APP_PATH}/.env << EOL
                     DOCKER_REGISTRY=${DOCKER_REGISTRY}
                     GITHUB_OWNER=${GITHUB_OWNER}
                     DOCKER_IMAGE=${DOCKER_IMAGE}
                     DOCKER_TAG=${DOCKER_TAG}
-                    APP_DEPLOY_PATH=${APP_DEPLOY_PATH}
+                    APP_PATH=${APP_PATH}
                     EOL"
                     '''
                 }
