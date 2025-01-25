@@ -20,6 +20,7 @@ pipeline {
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server')
         
         APP_PATH = 'javatheque'
+        APP_DEPLOY_PATH= 'javatheque/target'
 
         SUDO_PASSWORD = credentials('sudo-password')
     }
@@ -116,7 +117,7 @@ pipeline {
 
                     scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/target
 
-                    ssh ${DEPLOY_PPROD_SERVER} "printf 'DOCKER_REGISTRY=%s\nGITHUB_OWNER=%s\nDOCKER_IMAGE=%s\nDOCKER_TAG=%s\nAPP_PATH=%s' '${DOCKER_REGISTRY}' '${GITHUB_OWNER}' '${DOCKER_IMAGE}' '${DOCKER_TAG}' '${APP_PATH}' > ${APP_PATH}/.env"
+                    ssh ${DEPLOY_PPROD_SERVER} "printf 'DOCKER_REGISTRY=%s\nGITHUB_OWNER=%s\nDOCKER_IMAGE=%s\nDOCKER_TAG=%s\nAPP_DEPLOY_PATH=%s' '${DOCKER_REGISTRY}' '${GITHUB_OWNER}' '${DOCKER_IMAGE}' '${DOCKER_TAG}' '${APP_DEPLOY_PATH}' > ${APP_PATH}/.env"
                     '''
                 }
             }
