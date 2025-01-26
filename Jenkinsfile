@@ -138,6 +138,7 @@ pipeline {
                     chmod 644 ~/.ssh/known_hosts
 
                     # Synchronisation des fichiers
+                    ssh ${DEPLOY_PPROD_SERVER} "cd ${APP_PATH} && chmod -R 777 target/ || true"
                     rsync -av --delete --exclude=${DB_VOLUME} ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
                     scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/target
 
@@ -193,6 +194,7 @@ pipeline {
                     chmod 644 ~/.ssh/known_hosts
 
                     # Synchronisation des fichiers
+                    ssh ${DEPLOY_PPROD_SERVER} "cd ${APP_PATH} && chmod -R 777 target/ || true"
                     rsync -av --delete ./ ${DEPLOY_PROD_SERVER}:${APP_PATH}/
                     scp target/${APP_NAME}.war ${DEPLOY_PROD_SERVER}:${APP_PATH}/target
 
