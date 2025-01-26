@@ -20,7 +20,7 @@ pipeline {
         DEPLOY_PROD_SERVER = credentials('deploy-prod-server')
         
         APP_PATH = 'javatheque'
-        APP_DEPLOY_PATH= 'javatheque/target'
+        APP_DEPLOY_PATH= './target'
 
         SUDO_PASSWORD = credentials('sudo-password')
     }

@@ -1,5 +1,5 @@
 services:
-  app:
+  javatheque:
     image: ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
     container_name: javatheque
     ports:
