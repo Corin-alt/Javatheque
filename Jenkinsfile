@@ -138,8 +138,7 @@ pipeline {
                     chmod 644 ~/.ssh/known_hosts
 
                     # Synchronisation des fichiers
-                    ssh ${DEPLOY_PPROD_SERVER} "rm -rf ${APP_PATH}/target/.autodeploystatus || true"
-                    rsync -av --delete --exclude=${DB_VOLUME} ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
+                    rsync -av --delete --exclude=${DB_VOLUME} --exclude=.autodeploystatus ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
                     scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/target
 
                     # Configuration environnement
@@ -194,8 +193,7 @@ pipeline {
                     chmod 644 ~/.ssh/known_hosts
 
                     # Synchronisation des fichiers
-                    ssh ${DEPLOY_PPROD_SERVER} "rm -rf ${APP_PATH}/target/.autodeploystatus || true"
-                    rsync -av --delete ./ ${DEPLOY_PROD_SERVER}:${APP_PATH}/
+                    rsync -av --delete --exclude=${DB_VOLUME} --exclude=.autodeploystatus ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
                     scp target/${APP_NAME}.war ${DEPLOY_PROD_SERVER}:${APP_PATH}/target
 
                     # Configuration environnement
