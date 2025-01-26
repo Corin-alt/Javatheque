@@ -118,11 +118,6 @@ pipeline {
                 }
             }
             steps {
-
-                script {
-                    deployToEnvironment(env.DEPLOY_PPROD_SERVER, 'jenkins-ssh-private-key')
-                }
-
                 // Installation des outils nécessaires
                 sh '''
                     apt-get update && apt-get install -y openssh-client rsync
