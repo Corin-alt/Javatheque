@@ -114,10 +114,16 @@ pipeline {
                     chmod 644 ~/.ssh/known_hosts
 
                     rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
-
                     scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/target
 
                     ssh ${DEPLOY_PPROD_SERVER} "printf 'DOCKER_REGISTRY=%s\nGITHUB_OWNER=%s\nDOCKER_IMAGE=%s\nDOCKER_TAG=%s\nAPP_DEPLOY_PATH=%s' '${DOCKER_REGISTRY}' '${GITHUB_OWNER}' '${DOCKER_IMAGE}' '${DOCKER_TAG}' '${APP_DEPLOY_PATH}' > ${APP_PATH}/.env"
+
+                    ssh ${DEPLOY_PPROD_SERVER} "cd ${APP_PATH} && \
+                        echo ${GITHUB_TOKEN} | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin || exit 1 && \
+                        docker pull ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} || true && \
+                        docker compose down || echo 'Warning: docker compose down failed but continuing' && \
+                        docker compose up -d || exit 1 && \
+                        docker logout ghcr.io"
                     '''
                 }
             }
@@ -138,8 +144,34 @@ pipeline {
             }
             steps {
                 sh '''
-                    apt-get update && apt-get install -y openssh-client
+                    apt-get update && apt-get install -y openssh-client rsync
+                    mkdir -p target
+                    chmod -R 777 target
                 '''
+                copyArtifacts filter: 'target/*.war', fingerprintArtifacts: true, projectName: '${JOB_NAME}', selector: specific('${BUILD_NUMBER}')
+                sh 'chmod -R 777 target'
+                sshagent(credentials: ['jenkins-ssh-private-key']) {
+                    sh '''
+                    mkdir -p ~/.ssh
+                    chmod 700 ~/.ssh
+                    TARGET_IP=$(echo $DEPLOY_PPROD_SERVER | cut -d'@' -f2)
+
+                    ssh-keyscan -H $TARGET_IP >> ~/.ssh/known_hosts
+                    chmod 644 ~/.ssh/known_hosts
+
+                    rsync -av --delete ./ ${DEPLOY_PPROD_SERVER}:${APP_PATH}/
+                    scp target/${APP_NAME}.war ${DEPLOY_PPROD_SERVER}:${APP_PATH}/target
+
+                    ssh ${DEPLOY_PPROD_SERVER} "printf 'DOCKER_REGISTRY=%s\nGITHUB_OWNER=%s\nDOCKER_IMAGE=%s\nDOCKER_TAG=%s\nAPP_DEPLOY_PATH=%s' '${DOCKER_REGISTRY}' '${GITHUB_OWNER}' '${DOCKER_IMAGE}' '${DOCKER_TAG}' '${APP_DEPLOY_PATH}' > ${APP_PATH}/.env"
+
+                    ssh ${DEPLOY_PPROD_SERVER} "cd ${APP_PATH} && \
+                        echo ${GITHUB_TOKEN} | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin || exit 1 && \
+                        docker pull ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG} || true && \
+                        docker compose down || echo 'Warning: docker compose down failed but continuing' && \
+                        docker compose up -d || exit 1 && \
+                        docker logout ghcr.io"
+                    '''
+                }
             }
         }
     }
