@@ -1,4 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +16,7 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            flex-direction: column; 
+            flex-direction: column;
         }
 
         label {
@@ -57,7 +58,7 @@
 
         a {
             text-decoration: none;
-            color: #fff; 
+            color: #fff;
         }
 
         .error-message {
@@ -65,12 +66,20 @@
             font-size: 18px;
             color: #eb3b5a;
             margin-bottom: 10px;
+            text-align: center;
+            width: 100%;
         }
     </style>
 </head>
 <body>
 
 <h1><a href="${pageContext.request.contextPath}/">.NETFlix</a></h1>
+
+<c:if test="${not empty errorMessageBean.errorMessage}">
+    <div class="error-message">
+            ${errorMessageBean.errorMessage}
+    </div>
+</c:if>
 
 <form id="login_user" action="login" method="POST">
     <label for="email">Email: </label>
@@ -82,8 +91,5 @@
     <button type="submit">Connect</button>
 </form>
 
-<div class="error-message">
-
-</div>
 </body>
 </html>

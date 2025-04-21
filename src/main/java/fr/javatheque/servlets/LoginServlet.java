@@ -39,7 +39,7 @@ public class LoginServlet extends HttpServlet {
      * @throws IOException      if an input or output error occurs
      */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.getRequestDispatcher("/views/login.jsp").forward(request, response);
     }
@@ -53,7 +53,7 @@ public class LoginServlet extends HttpServlet {
      * @throws IOException      if an input or output error occurs
      */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    public void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String email = request.getParameter("email");
         String password = request.getParameter("password");

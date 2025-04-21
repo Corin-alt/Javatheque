@@ -4,25 +4,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Page Title</title>
+    <title>Error</title>
     <style>
         .error-message {
             font-weight: bold;
             font-size: 18px;
-            color: red;
+            color: #eb3b5a;
             margin-bottom: 10px;
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
-
-<jsp:useBean id="errorMessageBean" class="fr.javatheque.beans.ErrorMessageBean" scope="request" />
-
 <c:if test="${not empty errorMessageBean.errorMessage}">
     <div class="error-message">
             ${errorMessageBean.errorMessage}
     </div>
 </c:if>
-
 </body>
 </html>

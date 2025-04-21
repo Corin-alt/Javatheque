@@ -3,6 +3,8 @@ package fr.javatheque.beans;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Named;
 
+import java.util.stream.Stream;
+
 /**
  * A request-scoped bean that represents a success message.
  */
