@@ -14,20 +14,8 @@ ENV PATH=$PATH:$GLASSFISH_HOME/bin
 
 # Install required tools
 RUN apt-get update && \
-    apt-get install -y wget unzip && \
+    apt-get install -y wget && \
     rm -rf /var/lib/apt/lists/*
-
-# Install Chrome and ChromeDriver
-RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt-get update \
-    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
-    && LATEST_DRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE") \
-    && wget -N "https://chromedriver.storage.googleapis.com/$LATEST_DRIVER_VERSION/chromedriver_linux64.zip" \
-    && unzip chromedriver_linux64.zip \
-    && mv chromedriver /usr/local/bin/ \
-    && chmod +x /usr/local/bin/chromedriver \
-    && rm google-chrome-stable_current_amd64.deb chromedriver_linux64.zip \
-    && rm -rf /var/lib/apt/lists/*
 
 # Create GlassFish user for security
 RUN groupadd -r glassfish && \
