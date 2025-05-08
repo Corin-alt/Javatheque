@@ -65,7 +65,7 @@ pipeline {
                 }
             }
             steps {
-                sh 'mvn test -Dtest=fr.javatheque.unit.*'
+                sh 'mvn test -Dtest=**/*UnitTest'
             }
         }
         
