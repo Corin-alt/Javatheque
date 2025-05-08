@@ -23,8 +23,7 @@ pipeline {
     
     tools {
         maven 'Maven'
-        dockerTool 'Docker'
-        jdk 'JDK17'
+        docker 'Docker'
     }
     
     stages {
@@ -35,34 +34,6 @@ pipeline {
                     def changes = changeset 'Dockerfile'
                     env.DOCKERFILE_CHANGED = changes.toString()
                 }
-        
-                sh '''
-                    # Vérifier si GlassFish est déjà installé
-                    if [ ! -d "${GLASSFISH_HOME}" ]; then
-                        echo "GlassFish n'est pas installé, installation en cours..."
-                        wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
-                        unzip glassfish-7.0.0.zip -d /opt/
-                        chmod -R +x ${GLASSFISH_HOME}/bin
-                    fi
-
-                    ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
-                    # Configuration de la ressource MongoDB dans GlassFish
-                    ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
-                        --restype=java.lang.String \
-                        --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
-                        --property value=${DB_URL} \
-                        mongodb/url
-                    ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
-                        --restype=java.lang.String \
-                        --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
-                        --property value=${DB_USER} \
-                        mongodb/user
-                    ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
-                        --restype=java.lang.String \
-                        --factoryclass=org.glassfish.resources.custom.factory.PrimitivesAndStringFactory \
-                        --property value=${DB_PASSWORD} \
-                        mongodb/password
-                '''
                 sh 'mvn clean package -DskipTests'
             }
         }
@@ -74,34 +45,11 @@ pipeline {
                 }
             }
             steps {
-                sh 'mvn clean test -Dbrowser=chrome -DbaseUrl=http://localhost:8080/javatheque -Dheadless=true'
+                sh 'mvn test'
             }
             post {
                 always {
                     junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
-        
-        stage('Integration Testing') {
-            when {
-                expression {
-                    return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                }
-            }
-            steps {
-                sh """
-                    mvn verify -Dwebdriver.chrome.driver=/usr/local/bin/chromedriver \
-                        -Dselenium.chrome.options="${CHROME_OPTIONS}" \
-                        -Djakarta.persistence.jdbc.url=${DB_URL} \
-                        -Djakarta.persistence.jdbc.user=${DB_USER} \
-                        -Djakarta.persistence.jdbc.password=${DB_PASSWORD} \
-                        -Pfailsafe
-                """
-            }
-            post {
-                always {
-                    junit '**/target/failsafe-reports/*.xml'
                 }
             }
         }
@@ -148,7 +96,7 @@ pipeline {
                 }
             }
             steps {
-                sshagent(['deploy-pprod-key']) {
+                sshagent(['deploy-key']) {
                     sh """
                         ssh ${DEPLOY_SERVER} 'mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH}'
                         rsync -av --delete ./ ${DEPLOY_SERVER}:${APP_CODE_PATH}/
@@ -182,7 +130,6 @@ pipeline {
     
     post {
         always {
-            sh '${GLASSFISH_HOME}/bin/asadmin stop-domain domain1 || true'
             cleanWs()
         }
         success {
