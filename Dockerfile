@@ -14,7 +14,7 @@ ENV PATH=$PATH:$GLASSFISH_HOME/bin
 
 # Install required tools
 RUN apt-get update && \
-    apt-get install -y wget && \
+    apt-get install -y wget unzip && \
     rm -rf /var/lib/apt/lists/*
 
 # Create GlassFish user for security

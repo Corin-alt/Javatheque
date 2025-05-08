@@ -49,6 +49,9 @@ pipeline {
             steps {
                 script {
                     checkout scm
+                    def currentBranch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Current branch: ${currentBranch}"
+                    env.CURRENT_BRANCH = currentBranch
                 }
                 sh 'mvn clean package -DskipTests'
             }
@@ -68,7 +71,7 @@ pipeline {
         stage('Build and Push Docker Image') {
             steps {
                 script {
-                    echo "Current branch: ${env.BRANCH_NAME}"
+                    echo "Building Docker image for branch: ${env.CURRENT_BRANCH}"
                     def imageFullName = "${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}"
                     
                     docker.build("${imageFullName}:${DOCKER_TAG}")
