@@ -49,7 +49,7 @@ pipeline {
             steps {
                 script {
                     checkout scm
-                    def currentBranch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    def currentBranch = sh(script: 'git name-rev --name-only HEAD', returnStdout: true).trim()
                     echo "Current branch: ${currentBranch}"
                     env.CURRENT_BRANCH = currentBranch
                 }
@@ -69,6 +69,11 @@ pipeline {
         }
         
         stage('Build and Push Docker Image') {
+            when {
+                expression {
+                    return env.CURRENT_BRANCH == 'main' && currentBuild.resultIsBetterOrEqualTo('SUCCESS')
+                }
+            }
             steps {
                 script {
                     echo "Building Docker image for branch: ${env.CURRENT_BRANCH}"
@@ -78,7 +83,7 @@ pipeline {
                     
                     withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                         sh """
-                            echo $GITHUB_TOKEN | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
+                            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
                             docker push ${imageFullName}:${DOCKER_TAG}
                             docker logout ghcr.io
                         """
@@ -88,6 +93,11 @@ pipeline {
         }
         
         stage('Deploy to Pre-Production server') {
+            when {
+                expression {
+                    return env.CURRENT_BRANCH == 'main' && currentBuild.resultIsBetterOrEqualTo('SUCCESS')
+                }
+            }
             steps {
                 sshagent(['deploy-key']) {
                     sh """
@@ -108,7 +118,7 @@ pipeline {
                         sh """
                             ssh ${DEPLOY_SERVER} '
                                 cd ${APP_CODE_PATH}
-                                echo ${GITHUB_TOKEN} | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
+                                echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
                                 docker pull ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
                                 docker-compose down
                                 docker-compose up -d
