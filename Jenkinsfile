@@ -12,8 +12,6 @@ pipeline {
         APP_CODE_PATH = '/apps/java/src'
         APP_DEPLOY_PATH = '/apps/java/deploy'
         
-        DOCKERFILE_CHANGED = 'false'
-        
         GLASSFISH_HOME = '/opt/glassfish7'
         CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
         DB_URL = credentials('db_url')
@@ -51,8 +49,6 @@ pipeline {
             steps {
                 script {
                     checkout scm
-                    def changes = changeset 'Dockerfile'
-                    env.DOCKERFILE_CHANGED = changes.toString()
                 }
                 sh 'mvn clean package -DskipTests'
             }
@@ -75,9 +71,6 @@ pipeline {
                     branch 'main'
                     expression {
                         return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                    }
-                    expression {
-                        return env.DOCKERFILE_CHANGED == 'true'
                     }
                 }
             }
@@ -103,10 +96,7 @@ pipeline {
                 allOf {
                     branch 'main'
                     expression {
-                        def unitTestingSuccess = currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                        def dockerBuildSuccess = env.DOCKERFILE_CHANGED == 'false' || 
-                            (env.DOCKERFILE_CHANGED == 'true' && currentBuild.resultIsBetterOrEqualTo('SUCCESS'))
-                        return unitTestingSuccess && dockerBuildSuccess
+                        return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
                     }
                 }
             }
