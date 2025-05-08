@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9-eclipse-temurin-17'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     environment {
         APP_NAME = 'javatheque'
@@ -33,32 +28,6 @@ pipeline {
     }
     
     stages {
-        stage('Setup Environment') {
-            steps {
-                script {
-                    sh '''
-                        # Installation de Chrome et ChromeDriver
-                        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-                        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
-                        apt-get update
-                        apt-get install -y google-chrome-stable
-                        
-                        CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1)
-                        wget -N "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}"
-                        wget -N "https://chromedriver.storage.googleapis.com/$(cat LATEST_RELEASE_${CHROME_VERSION})/chromedriver_linux64.zip"
-                        unzip chromedriver_linux64.zip
-                        mv chromedriver /usr/local/bin/
-                        chmod +x /usr/local/bin/chromedriver
-                        
-                        # Installation de GlassFish 7
-                        wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
-                        unzip glassfish-7.0.0.zip -d /opt/
-                        chmod -R +x ${GLASSFISH_HOME}/bin
-                    '''
-                }
-            }
-        }
-
         stage('Checkout & Build') {
             steps {
                 script {
@@ -68,6 +37,14 @@ pipeline {
                 }
         
                 sh '''
+                    # Vérifier si GlassFish est déjà installé
+                    if [ ! -d "${GLASSFISH_HOME}" ]; then
+                        echo "GlassFish n'est pas installé, installation en cours..."
+                        wget https://download.eclipse.org/ee4j/glassfish/glassfish-7.0.0.zip
+                        unzip glassfish-7.0.0.zip -d /opt/
+                        chmod -R +x ${GLASSFISH_HOME}/bin
+                    fi
+
                     ${GLASSFISH_HOME}/bin/asadmin start-domain domain1
                     # Configuration de la ressource MongoDB dans GlassFish
                     ${GLASSFISH_HOME}/bin/asadmin create-custom-resource \
