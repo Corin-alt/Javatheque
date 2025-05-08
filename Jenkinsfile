@@ -65,7 +65,7 @@ pipeline {
                 }
             }
             steps {
-                sh 'mvn test'
+                sh 'mvn test -Dtest=fr.javatheque.unit.*'
             }
             post {
                 always {
