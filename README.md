@@ -5,8 +5,8 @@ Javatheque is a project to create an API rest for managing a video library using
 This project is part of module RT0805 of the Master DAS.
 ## Authors
 
-- Dupont Corentin
-- Morlet Flavien
+- Corentin
+- Flavien
 
 ## Usage
 
