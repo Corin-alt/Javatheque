@@ -69,11 +69,6 @@ pipeline {
         }
         
         stage('Build and Push Docker Image') {
-            when {
-                expression {
-                    return env.CURRENT_BRANCH == 'main' && currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                }
-            }
             steps {
                 script {
                     echo "Building Docker image for branch: ${env.CURRENT_BRANCH}"
@@ -93,11 +88,6 @@ pipeline {
         }
         
         stage('Deploy to Pre-Production server') {
-            when {
-                expression {
-                    return env.CURRENT_BRANCH == 'main' && currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                }
-            }
             steps {
                 sshagent(['deploy-key']) {
                     sh """
