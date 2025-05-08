@@ -67,11 +67,6 @@ pipeline {
             steps {
                 sh 'mvn test -Dtest=fr.javatheque.unit.*'
             }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
         }
         
         stage('Build and Push Docker Image') {
