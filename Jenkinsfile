@@ -66,16 +66,9 @@ pipeline {
         }
         
         stage('Build and Push Docker Image') {
-            when {
-                allOf {
-                    branch 'main'
-                    expression {
-                        return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                    }
-                }
-            }
             steps {
                 script {
+                    echo "Current branch: ${env.BRANCH_NAME}"
                     def imageFullName = "${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}"
                     
                     docker.build("${imageFullName}:${DOCKER_TAG}")
@@ -92,14 +85,6 @@ pipeline {
         }
         
         stage('Deploy to Pre-Production server') {
-            when {
-                allOf {
-                    branch 'main'
-                    expression {
-                        return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                    }
-                }
-            }
             steps {
                 sshagent(['deploy-key']) {
                     sh """
