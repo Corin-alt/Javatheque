@@ -61,7 +61,7 @@ pipeline {
         
         stage('Deploy to Pre-Production server') {
             steps {
-                sshagent(['deploy-key']) {
+                sshagent(['deploy-pprod-key']) {
                     sh """
                         ssh ${DEPLOY_PP_SERVER} 'mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH}'
                         rsync -av --delete ./ ${DEPLOY_PP_SERVER}:${APP_CODE_PATH}/
