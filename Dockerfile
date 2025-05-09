@@ -47,9 +47,9 @@ RUN mkdir -p $DEPLOY_DIR && \
     chmod -R 777 $DEPLOY_DIR && \
     chown -R glassfish:glassfish $GLASSFISH_HOME
 
-# Copy the startup script to the root directory
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+# Copy the entrypoint script from your project
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Create volume for auto-deployment
 VOLUME ["$DEPLOY_DIR"]
@@ -63,5 +63,5 @@ EXPOSE 8080 4848 8181
 # Set working directory
 WORKDIR $GLASSFISH_HOME
 
-# Start GlassFish using our script
+# Use the entrypoint script
 CMD ["/start.sh"]

@@ -20,4 +20,4 @@ fi
 
 # Démarrer GlassFish au premier plan
 echo "Démarrage de GlassFish au premier plan..."
-exec asadmin start-domain ${DOMAIN_NAME} --verbose
+exec asadmin start-domain --verbose ${DOMAIN_NAME}
