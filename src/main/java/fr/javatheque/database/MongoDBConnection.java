@@ -11,9 +11,11 @@ import org.bson.codecs.configuration.CodecRegistry;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 public class MongoDBConnection {
-
+    private static final Logger LOGGER = Logger.getLogger(MongoDBConnection.class.getName());
     private static MongoClient mongoClient = null;
     private static final String TEST_DATABASE_NAME = "javatheque-locust";
     private static final String PROD_DATABASE_NAME = "javatheque";
@@ -24,44 +26,55 @@ public class MongoDBConnection {
     );
 
     private static String buildConnectionString() throws NamingException {
+        LOGGER.info("Building MongoDB connection string...");
         InitialContext context = new InitialContext();
         String url = (String) context.lookup("mongodb/url");
         String user = (String) context.lookup("mongodb/user");
         String password = (String) context.lookup("mongodb/password");
 
+        LOGGER.info("JNDI lookup results - URL: " + url + ", User: " + user);
+
         if (url == null || url.isEmpty()) {
-            return "mongodb://root:root@localhost:27017";
+            LOGGER.info("Using default MongoDB connection string");
+            return "mongodb://root:root@mongodb:27017";
         }
         if (url.contains("@")) {
+            LOGGER.info("Using provided MongoDB connection string with credentials");
             return url;
         }
 
         String baseUrl = url.replace("mongodb://", "");
-        return String.format("mongodb://%s:%s@%s", user, password, baseUrl);
+        String connectionString = String.format("mongodb://%s:%s@%s", user, password, baseUrl);
+        LOGGER.info("Built MongoDB connection string: " + connectionString);
+        return connectionString;
     }
 
     private static MongoClient getMongoClient() {
         if (mongoClient == null) {
             try {
+                LOGGER.info("Creating new MongoDB client...");
                 String connectionString = buildConnectionString();
                 MongoClientSettings settings = MongoClientSettings.builder()
                         .applyConnectionString(new ConnectionString(connectionString))
                         .codecRegistry(codecRegistry)
                         .build();
                 mongoClient = MongoClients.create(settings);
+                LOGGER.info("MongoDB client created successfully");
             } catch (NamingException e) {
-                System.err.println("Warning: Using default MongoDB connection settings. " + e.getMessage());
+                LOGGER.log(Level.WARNING, "Warning: Using default MongoDB connection settings. " + e.getMessage());
                 MongoClientSettings settings = MongoClientSettings.builder()
-                        .applyConnectionString(new ConnectionString("mongodb://root:root@localhost:27017"))
+                        .applyConnectionString(new ConnectionString("mongodb://root:root@mongodb:27017"))
                         .codecRegistry(codecRegistry)
                         .build();
                 mongoClient = MongoClients.create(settings);
+                LOGGER.info("MongoDB client created with default settings");
             }
         }
         return mongoClient;
     }
 
     public static MongoDatabase getDatabase(String dbName) {
+        LOGGER.info("Getting database: " + dbName);
         return getMongoClient().getDatabase(dbName);
     }
 
@@ -76,6 +89,7 @@ public class MongoDBConnection {
 
     public static void close() {
         if (mongoClient != null) {
+            LOGGER.info("Closing MongoDB client");
             mongoClient.close();
             mongoClient = null;
         }

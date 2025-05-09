@@ -3,6 +3,12 @@
 		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		 xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
 
+	<display-name>Javatheque</display-name>
+	<context-param>
+		<param-name>contextPath</param-name>
+		<param-value>/javatheque</param-value>
+	</context-param>
+
 	<!-- Ajout du filtre pour l'environnement de test -->
 	<filter>
 		<filter-name>testEnvironmentFilter</filter-name>
@@ -73,4 +79,8 @@
 		<servlet-name>FilmServlet</servlet-name>
 		<url-pattern>/film/*</url-pattern>
 	</servlet-mapping>
+
+	<welcome-file-list>
+		<welcome-file>index.html</welcome-file>
+	</welcome-file-list>
 </web-app>

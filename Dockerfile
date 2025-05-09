@@ -47,6 +47,11 @@ RUN mkdir -p $DEPLOY_DIR && \
     chmod -R 777 $DEPLOY_DIR && \
     chown -R glassfish:glassfish $GLASSFISH_HOME
 
+# Create bundles directory for OSGi bundles
+RUN mkdir -p $DEPLOY_DIR/bundles && \
+    chmod -R 777 $DEPLOY_DIR/bundles && \
+    chown -R glassfish:glassfish $DEPLOY_DIR/bundles
+
 # Copy the entrypoint script from your project
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
