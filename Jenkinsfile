@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '2')
+    }
+
     environment {
         APP_NAME = 'javatheque'
         DOCKER_IMAGE = 'javatheque-env'
@@ -11,6 +15,7 @@ pipeline {
         DEPLOY_PP_SERVER = credentials('deploy-pprod-serv') 
         APP_CODE_PATH = '/home/urca/apps/java/src'
         APP_DEPLOY_PATH = '/home/urca/apps/java/deploy'
+       GLASSFISH_HOME = '/opt/glassfish7'
     }
     
     tools {

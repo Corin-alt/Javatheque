@@ -48,8 +48,8 @@ RUN mkdir -p $DEPLOY_DIR && \
     chown -R glassfish:glassfish $GLASSFISH_HOME
 
 # Copy the entrypoint script from your project
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 # Create volume for auto-deployment
 VOLUME ["$DEPLOY_DIR"]
