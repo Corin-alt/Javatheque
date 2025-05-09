@@ -5,10 +5,16 @@ services:
     ports:
       - 8080:8080
       - 4848:4848
+      - 8181:8181
     volumes:
       - ${APP_DEPLOY_PATH}:/opt/glassfish7/glassfish/domains/domain1/autodeploy
+    # Nous n'ajoutons pas user: root explicitement car c'est déjà le comportement par défaut
+    # et nous avons commenté l'instruction USER dans le Dockerfile
     depends_on:
       - db
+    environment:
+      - TZ=Europe/Paris
+    restart: unless-stopped
 
   db:
     image: mongo
@@ -24,6 +30,7 @@ services:
 
   db-client:
     image: mongo-express
+    container_name: mongo-express
     restart: always
     ports:
       - 8081:8081

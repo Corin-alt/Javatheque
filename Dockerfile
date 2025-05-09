@@ -40,13 +40,19 @@ RUN echo "AS_ADMIN_PASSWORD=" > /tmp/pwdfile && \
     asadmin start-domain ${DOMAIN_NAME} && \
     asadmin --user admin --passwordfile /tmp/pwdfile change-admin-password && \
     asadmin stop-domain ${DOMAIN_NAME} && \
-    rm /tmp/pwdfile && \
-    chmod -R 755 $DOMAIN_DIR && \
+    rm /tmp/pwdfile
+
+# Ensure the autodeploy directory exists and has permissive rights
+RUN mkdir -p $DEPLOY_DIR && \
+    chmod -R 777 $DEPLOY_DIR && \
     chown -R glassfish:glassfish $GLASSFISH_HOME
 
 # Create volume for auto-deployment
-# This is where the WAR file will be mounted from the host
 VOLUME ["$DEPLOY_DIR"]
+
+# Copy the startup script
+COPY start.sh /opt/start.sh
+RUN chmod +x /opt/start.sh
 
 # Expose required ports:
 # 8080: HTTP
@@ -54,8 +60,5 @@ VOLUME ["$DEPLOY_DIR"]
 # 8181: HTTPS
 EXPOSE 8080 4848 8181
 
-# Switch to glassfish user for security
-USER glassfish
-
-# Start GlassFish in verbose mode
-CMD ["asadmin", "start-domain", "--verbose"]
+# Start GlassFish using our script
+CMD ["/opt/start.sh"]
