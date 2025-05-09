@@ -9,10 +9,8 @@ pipeline {
         GITHUB_OWNER = 'corin-alt'
 
         DEPLOY_PP_SERVER = credentials('deploy-pprod-serv') 
-        APP_CODE_PATH = '/apps/java/src'
-        APP_DEPLOY_PATH = '/apps/java/deploy'
-        
-        GLASSFISH_HOME = '/opt/glassfish7'
+        APP_CODE_PATH = '/home/urca/apps/java/src'
+        APP_DEPLOY_PATH = '/home/urca/apps/java/deploy'
     }
     
     tools {
