@@ -1,28 +1,23 @@
 #!/bin/sh
 
-# Check and fix autodeploy directory permissions
-echo "Checking autodeploy directory permissions..."
+# Vérifier et corriger les permissions du répertoire d'autodéploiement
+echo "Vérification des permissions du répertoire d'autodéploiement..."
 if [ ! -d "$DEPLOY_DIR" ]; then
-    echo "Creating directory $DEPLOY_DIR"
+    echo "Création du répertoire $DEPLOY_DIR"
     mkdir -p $DEPLOY_DIR
 fi
 
-# Try to modify permissions (may fail if mounted as a volume)
-chmod -R 777 $DEPLOY_DIR 2>/dev/null || echo "Warning: Could not change permissions on $DEPLOY_DIR"
-echo "Current state of autodeploy directory:"
+# Tenter de modifier les permissions
+chmod -R 777 $DEPLOY_DIR 2>/dev/null || echo "Avertissement: Impossible de modifier les permissions de $DEPLOY_DIR"
+echo "État actuel du répertoire d'autodéploiement:"
 ls -la $DEPLOY_DIR
 
-# Start GlassFish in the background
-echo "Starting GlassFish..."
-asadmin start-domain ${DOMAIN_NAME} &
-GLASSFISH_PID=$!
-
-# If Nginx is installed, start it in the foreground
+# Si Nginx est installé et nécessaire, le démarrer en arrière-plan
 if command -v nginx >/dev/null 2>&1; then
-    echo "Starting Nginx..."
-    nginx -g 'daemon off;'
-else
-    echo "Nginx is not installed, running GlassFish in the foreground..."
-    # Keep the script running by waiting for GlassFish
-    wait $GLASSFISH_PID
+    echo "Démarrage de Nginx en arrière-plan..."
+    nginx &
 fi
+
+# Démarrer GlassFish au premier plan
+echo "Démarrage de GlassFish au premier plan..."
+exec asadmin start-domain ${DOMAIN_NAME} --verbose

@@ -14,7 +14,7 @@ ENV PATH=$PATH:$GLASSFISH_HOME/bin
 
 # Install required tools
 RUN apt-get update && \
-    apt-get install -y wget unzip && \
+    apt-get install -y wget unzip curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Create GlassFish user for security
@@ -42,17 +42,17 @@ RUN echo "AS_ADMIN_PASSWORD=" > /tmp/pwdfile && \
     asadmin stop-domain ${DOMAIN_NAME} && \
     rm /tmp/pwdfile
 
-# Ensure the autodeploy directory exists and has permissive rights
+# Make sure autodeploy directory exists and has correct permissions
 RUN mkdir -p $DEPLOY_DIR && \
     chmod -R 777 $DEPLOY_DIR && \
     chown -R glassfish:glassfish $GLASSFISH_HOME
 
+# Copy the startup script to the root directory
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 # Create volume for auto-deployment
 VOLUME ["$DEPLOY_DIR"]
-
-# Copy the startup script
-COPY start.sh /opt/start.sh
-RUN chmod +x /opt/start.sh
 
 # Expose required ports:
 # 8080: HTTP
@@ -60,5 +60,8 @@ RUN chmod +x /opt/start.sh
 # 8181: HTTPS
 EXPOSE 8080 4848 8181
 
+# Set working directory
+WORKDIR $GLASSFISH_HOME
+
 # Start GlassFish using our script
-CMD ["/opt/start.sh"]
+CMD ["/start.sh"]
