@@ -59,38 +59,43 @@ pipeline {
             }
         }
         
-        stage('Deploy to Pre-Production server') {
-            steps {
-                sshagent(['deploy-pprod-key']) {
-                    sh """
-                        ssh ${DEPLOY_PP_SERVER} 'mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH}'
-                        rsync -av --delete ./ ${DEPLOY_PP_SERVER}:${APP_CODE_PATH}/
-                        scp target/${APP_NAME}.war ${DEPLOY_PP_SERVER}:${APP_DEPLOY_PATH}/
-                        
-                        ssh ${DEPLOY_PP_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
-                        DOCKER_REGISTRY=${DOCKER_REGISTRY}
-                        GITHUB_OWNER=${GITHUB_OWNER}
-                        DOCKER_IMAGE=${DOCKER_IMAGE}
-                        DOCKER_TAG=${DOCKER_TAG}
-                        APP_DEPLOY_PATH=${APP_DEPLOY_PATH}
-                        EOL"
-                    """
-                    
-                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        sh """
-                            ssh ${DEPLOY_PP_SERVER} "
-                                cd ${APP_CODE_PATH}
-                                docker login ghcr.io -u ${GITHUB_OWNER} -p '${GITHUB_TOKEN}'
-                                docker pull ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                                docker-compose down
-                                docker-compose up -d
-                                docker logout ghcr.io
-                            "
-                        """
-                    }
-                }
+stage('Deploy to Pre-Production server') {
+    steps {
+        sshagent(['deploy-pprod-key']) {
+            sh '''
+                mkdir -p ~/.ssh
+                ssh-keyscan 10.11.40.50 >> ~/.ssh/known_hosts
+            '''
+
+            sh '''
+                ssh $DEPLOY_PP_SERVER 'mkdir -p $APP_CODE_PATH $APP_DEPLOY_PATH'
+                rsync -av --delete ./ $DEPLOY_PP_SERVER:$APP_CODE_PATH/
+                scp target/$APP_NAME.war $DEPLOY_PP_SERVER:$APP_DEPLOY_PATH/
+                ssh $DEPLOY_PP_SERVER "cat > $APP_CODE_PATH/.env << EOL
+                DOCKER_REGISTRY=$DOCKER_REGISTRY
+                GITHUB_OWNER=$GITHUB_OWNER
+                DOCKER_IMAGE=$DOCKER_IMAGE
+                DOCKER_TAG=$DOCKER_TAG
+                APP_DEPLOY_PATH=$APP_DEPLOY_PATH
+                EOL"
+            '''
+
+            withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                sh '''
+                    ssh $DEPLOY_PP_SERVER "
+                        cd $APP_CODE_PATH
+                        docker login ghcr.io -u $GITHUB_OWNER -p '$GITHUB_TOKEN'
+                        docker pull $DOCKER_REGISTRY/$GITHUB_OWNER/$DOCKER_IMAGE:$DOCKER_TAG
+                        docker-compose down
+                        docker-compose up -d
+                        docker logout ghcr.io
+                    "
+                '''
             }
         }
+    }
+}
+
     }
     
     post {
