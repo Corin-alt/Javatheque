@@ -1,3 +1,7 @@
+networks:
+  devops:
+    external: true
+
 services:
   app:
     image: ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
@@ -8,13 +12,13 @@ services:
       - 8181:8181
     volumes:
       - ${APP_DEPLOY_PATH}:/opt/glassfish7/glassfish/domains/domain1/autodeploy:rw
-    # Nous n'ajoutons pas user: root explicitement car c'est déjà le comportement par défaut
-    # et nous avons commenté l'instruction USER dans le Dockerfile
     depends_on:
       - mongodb
     environment:
       - TZ=Europe/Paris
     restart: unless-stopped
+    networks:
+      - devops
 
   mongodb:
     image: mongo
@@ -27,6 +31,8 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=root
     volumes:
       - ./mongodb_volume:/data/db
+    networks:
+      - devops
 
   mongo-express:
     image: mongo-express
@@ -40,3 +46,5 @@ services:
       - ME_CONFIG_MONGODB_URL=mongodb://root:root@mongodb:27017/
     depends_on:
       - mongodb
+    networks:
+      - devops
