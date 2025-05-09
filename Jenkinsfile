@@ -8,7 +8,7 @@ pipeline {
         DOCKER_REGISTRY = 'ghcr.io'
         GITHUB_OWNER = 'corin-alt'
 
-        DEPLOY_SERVER = credentials('deploy-pprod-serv') 
+        DEPLOY_PP_SERVER = credentials('deploy-pprod-serv') 
         APP_CODE_PATH = '/apps/java/src'
         APP_DEPLOY_PATH = '/apps/java/deploy'
         
@@ -50,7 +50,7 @@ pipeline {
                     
                     withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                         sh """
-                            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
+                            docker login ghcr.io -u ${GITHUB_OWNER} -p "${GITHUB_TOKEN}"
                             docker push ${imageFullName}:${DOCKER_TAG}
                             docker logout ghcr.io
                         """
@@ -63,11 +63,11 @@ pipeline {
             steps {
                 sshagent(['deploy-key']) {
                     sh """
-                        ssh ${DEPLOY_SERVER} 'mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH}'
-                        rsync -av --delete ./ ${DEPLOY_SERVER}:${APP_CODE_PATH}/
-                        scp target/${APP_NAME}.war ${DEPLOY_SERVER}:${APP_DEPLOY_PATH}/
+                        ssh ${DEPLOY_PP_SERVER} 'mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH}'
+                        rsync -av --delete ./ ${DEPLOY_PP_SERVER}:${APP_CODE_PATH}/
+                        scp target/${APP_NAME}.war ${DEPLOY_PP_SERVER}:${APP_DEPLOY_PATH}/
                         
-                        ssh ${DEPLOY_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
+                        ssh ${DEPLOY_PP_SERVER} "cat > ${APP_CODE_PATH}/.env << EOL
                         DOCKER_REGISTRY=${DOCKER_REGISTRY}
                         GITHUB_OWNER=${GITHUB_OWNER}
                         DOCKER_IMAGE=${DOCKER_IMAGE}
@@ -78,14 +78,14 @@ pipeline {
                     
                     withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                         sh """
-                            ssh ${DEPLOY_SERVER} '
+                            ssh ${DEPLOY_PP_SERVER} "
                                 cd ${APP_CODE_PATH}
-                                echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${GITHUB_OWNER} --password-stdin
+                                docker login ghcr.io -u ${GITHUB_OWNER} -p '${GITHUB_TOKEN}'
                                 docker pull ${DOCKER_REGISTRY}/${GITHUB_OWNER}/${DOCKER_IMAGE}:${DOCKER_TAG}
                                 docker-compose down
                                 docker-compose up -d
                                 docker logout ghcr.io
-                            '
+                            "
                         """
                     }
                 }
