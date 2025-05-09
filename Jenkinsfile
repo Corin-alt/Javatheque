@@ -62,7 +62,8 @@ pipeline {
             sshagent(['deploy-pprod-key']) {
                 sh """
                     ssh \$DEPLOY_PP_SERVER 'mkdir -p ${APP_CODE_PATH} ${APP_DEPLOY_PATH}'
-                    rsync -av --delete ./ \$DEPLOY_PP_SERVER:${APP_CODE_PATH}/
+                    # Using --exclude to skip mongodb_volume directory
+                    rsync -av --delete --exclude 'mongodb_volume' ./ \$DEPLOY_PP_SERVER:${APP_CODE_PATH}/
                     scp target/${APP_NAME}.war \$DEPLOY_PP_SERVER:${APP_DEPLOY_PATH}/
 
                     ssh \$DEPLOY_PP_SERVER "cat > ${APP_CODE_PATH}/.env << EOL
