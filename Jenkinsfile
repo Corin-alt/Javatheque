@@ -13,10 +13,6 @@ pipeline {
         APP_DEPLOY_PATH = '/apps/java/deploy'
         
         GLASSFISH_HOME = '/opt/glassfish7'
-        CHROME_OPTIONS = '--headless --no-sandbox --disable-dev-shm-usage'
-        DB_URL = credentials('db_url')
-        DB_USER = credentials('db_user')
-        DB_PASSWORD = credentials('db_password')
     }
     
     tools {
@@ -25,26 +21,7 @@ pipeline {
     }
     
     stages {
-        stage('Start MongoDB') {
-            steps {
-                sh '''
-                    # Vérifier si MongoDB est déjà en cours d'exécution
-                    if ! docker ps | grep -q "mongo"; then
-                        echo "Démarrage de MongoDB..."
-                        docker run -d --name mongodb \
-                            -p 27017:27017 \
-                            -e MONGO_INITDB_ROOT_USERNAME=${DB_USER} \
-                            -e MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD} \
-                            mongo:latest
-                        
-                        # Attendre que MongoDB soit prêt
-                        echo "Attente du démarrage de MongoDB..."
-                        sleep 10
-                    fi
-                '''
-            }
-        }
-
+        
         stage('Checkout & Build') {
             steps {
                 script {
@@ -58,11 +35,6 @@ pipeline {
         }
         
         stage('Unit testing') {
-            when {
-                expression {
-                    return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                }
-            }
             steps {
                 sh 'mvn test -Dtest=**/*UnitTest'
             }
@@ -123,8 +95,6 @@ pipeline {
     
     post {
         always {
-            sh 'docker stop mongodb || true'
-            sh 'docker rm mongodb || true'
             cleanWs()
         }
         success {
